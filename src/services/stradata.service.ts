@@ -30,11 +30,25 @@ export interface ConsultarTerceroStradataRequest {
 }
 
 export interface ConsultarTerceroStradataResponse {
-  success: boolean;
+  success?: boolean; // Opcional porque el backend no siempre lo incluye
   mensaje?: string;
   personas_consultadas?: number;
   personas?: string[];
-  respuesta_stradata?: any;
+  id_busqueda?: number;
+  codigo_busqueda?: string;
+  id_plantilla?: number;
+  servicios?: {
+    [key: string]: {
+      status: string;
+      status_code: number;
+      url: string;
+    };
+  };
+  resumen_servicios?: {
+    total: number;
+    exitosos: number;
+    fallidos: number;
+  };
   error?: string;
 }
 
@@ -214,7 +228,7 @@ export class StratadaService {
         try {
             console.log(`🔍 Ejecutando consulta Stradata integrada para tercero: ${terceroId}`);
 
-            const response = await apiRequest.post<ConsultarTerceroStradataResponse>(
+            const response = await apiRequest.postStradata<ConsultarTerceroStradataResponse>(
                 `/stradata/terceros/${terceroId}/consultar-stradata/`,
                 credenciales
             );

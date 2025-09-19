@@ -368,6 +368,19 @@ export const apiRequest = {
     return response.data.data !== undefined ? response.data.data! : response.data as T;
   },
 
+  // Función especializada para consultas Stradata con timeout extendido
+  postStradata: async <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
+    const stradataConfig: AxiosRequestConfig = {
+      ...config,
+      timeout: 300000, // 5 minutos para consultas Stradata
+    };
+    
+    console.log(`🔍 Iniciando consulta Stradata con timeout extendido: ${stradataConfig.timeout}ms`);
+    const response = await enhancedApiClient.post<ApiResponse<T>>(url, data, stradataConfig);
+    // Para endpoints de Django DRF que devuelven datos directamente
+    return response.data.data !== undefined ? response.data.data! : response.data as T;
+  },
+
   put: async <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> => {
     const response = await enhancedApiClient.put<ApiResponse<T>>(url, data, config);
     // Para endpoints de Django DRF que devuelven datos directamente

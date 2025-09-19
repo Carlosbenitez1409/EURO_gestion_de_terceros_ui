@@ -12,6 +12,7 @@ import StratadaService, { DocumentoStradataUpload, stradataService, stradataCons
 import { debidaDiligenciaService } from "@/services/debida-diligencia.service";
 
 import ConsultaStrataModal from "@/components/stradata/ConsultaStrataModal";
+import StratadaLoadingOverlay from "@/components/stradata/StratadaLoadingOverlay";
 import { EnviarInformacionButton } from "@/components/terceros/EnviarInformacionButton";
 import { APP_CONFIG } from "@/config/app.config";
 import { logoutUser } from "@/utils/logout.util";
@@ -486,6 +487,11 @@ export default function TerceroView() {
         iniciarConsultaCompleta,
         abrirModalConsulta: abrirModalStratadaIntegrado,
         cerrarModalConsulta: cerrarModalStratadaIntegrado,
+        // NUEVOS: Estados para pantalla de carga
+        mostrarPantallaCarga,
+        tiempoInicioConsulta,
+        cerrarPantallaCarga,
+        consultaCompleta,
         totalPersonasConsultar,
         terceroNombre: terceroNombreStradata,
         cargando: cargandoStradata
@@ -3753,6 +3759,17 @@ export default function TerceroView() {
                     cargarDocumentosStratadaSubidos();
                     // El modal se cerrará automáticamente por el hook
                 }}
+            />
+
+            {/* 🆕 Pantalla de carga para consulta Stradata */}
+            <StratadaLoadingOverlay
+                isOpen={mostrarPantallaCarga}
+                terceroNombre={terceroNombreStradata || (tercero?.tipo_persona === 'juridica' ? (tercero?.razon_social || tercero?.nombreRazonSocial || '') : `${tercero?.nombres || ''} ${tercero?.apellidos || ''}`.trim())}
+                totalPersonas={totalPersonasConsultar}
+                timeElapsed={tiempoInicioConsulta ? Math.floor((new Date().getTime() - tiempoInicioConsulta.getTime()) / 1000) : 0}
+                estimatedTimeMinutes={3}
+                consultaCompleta={consultaCompleta}
+                onClose={cerrarPantallaCarga}
             />
         </AppLayout>
     );

@@ -15,6 +15,7 @@ import { APP_CONFIG } from '@/config/app.config';
 import { TokenStorage } from '@/lib/api.client';
 import { useStratadaIntegration } from '@/hooks/use-stradata-integration';
 import ResumenPersonasStradata from './ResumenPersonasStradata';
+import StratadaLoadingOverlay from './StratadaLoadingOverlay';
 
 interface ConsultaStrataModalProps {
   terceroId: string;
@@ -42,7 +43,15 @@ export const ConsultaStrataModal: React.FC<ConsultaStrataModalProps> = ({
     loadingResumen,
     consultandoStradata,
     ejecutarConsultaIntegrada,
-    obtenerResumenPersonas
+    obtenerResumenPersonas,
+    // NUEVOS: Estados para pantalla de carga
+    mostrarPantallaCarga,
+    tiempoInicioConsulta,
+    cerrarPantallaCarga,
+    consultaCompleta,
+    // Datos computados
+    totalPersonasConsultar,
+    terceroNombre: terceroNombreCompleto
   } = useStratadaIntegration({ terceroId });
 
   // Cargar resumen cuando se abre el modal
@@ -68,7 +77,17 @@ export const ConsultaStrataModal: React.FC<ConsultaStrataModalProps> = ({
         password: contraseña
       });
 
-      if (resultado?.success) {
+      // Verificar éxito basándose en la presencia de personas_consultadas
+      const esExitoso = resultado?.success === true || (resultado?.personas_consultadas !== undefined && resultado?.personas_consultadas >= 0);
+
+      console.log(`🔍 Debug Modal - Resultado consulta:`, {
+        success: resultado?.success,
+        personas_consultadas: resultado?.personas_consultadas,
+        esExitoso
+      });
+
+      if (esExitoso) {
+        console.log('✅ Modal - Ejecutando onSuccess callback');
         // Limpiar contraseña por seguridad
         setContraseña('');
         
@@ -82,6 +101,8 @@ export const ConsultaStrataModal: React.FC<ConsultaStrataModalProps> = ({
             message: resultado.mensaje
           });
         }
+      } else {
+        console.log('❌ Modal - No se ejecuta onSuccess, consulta no exitosa');
       }
     } catch (error) {
       console.error('❌ Error en consulta:', error);
@@ -240,6 +261,17 @@ export const ConsultaStrataModal: React.FC<ConsultaStrataModalProps> = ({
           </div>
         </form>
       </DialogContent>
+      
+      {/* Pantalla de carga para consulta Stradata */}
+      <StratadaLoadingOverlay
+        isOpen={mostrarPantallaCarga}
+        terceroNombre={terceroNombreCompleto || terceroNombre}
+        totalPersonas={totalPersonasConsultar}
+        timeElapsed={tiempoInicioConsulta ? Math.floor((new Date().getTime() - tiempoInicioConsulta.getTime()) / 1000) : 0}
+        estimatedTimeMinutes={3}
+        consultaCompleta={consultaCompleta}
+        onClose={cerrarPantallaCarga}
+      />
     </Dialog>
   );
 };

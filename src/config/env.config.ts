@@ -133,7 +133,7 @@ export const appConfig = {
     },
 
     // Configuración específica para compatibilidad con app.config.ts
-    apiUrl: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api',
+    apiUrl: import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '/api',
     appUrl: import.meta.env.VITE_APP_URL || import.meta.env.VITE_PROXY_TARGET || 'http://localhost:5173',
     appName: import.meta.env.VITE_APP_NAME || 'EURO - Gestión de Terceros',
     appVersion: import.meta.env.VITE_APP_VERSION || '1.0.0',

@@ -37,15 +37,40 @@ Sistema integral para la gestión de terceros (proveedores, empleados, etc.) des
 ```bash
 # Clonar el repositorio
 git clone [repository-url]
-cd vite-project
+cd EURO_FRONTEND
 
 # Instalar dependencias
 npm install
 
-# Configurar variables de entorno
-# Crear archivo .env con:
-VITE_API_URL=http://127.0.0.1:8000
+# Configurar variables de entorno (seleccionar según entorno)
+# Para desarrollo local usar .env.local
+# Para producción usar .env.production
+cp .env.local .env  # Para desarrollo
+# O
+cp .env.production .env  # Para producción
 ```
+
+### Configuración de Entorno
+
+#### 🔧 Variables de Entorno Importantes
+
+**Para Desarrollo (usar .env.local como base):**
+- `VITE_API_URL=/api` - Usa proxy de Vite para llamadas API
+- `VITE_PROXY_TARGET=http://127.0.0.1:8000` - Backend Django
+- `VITE_PORT=8080` - Puerto del frontend
+
+**Para Producción (usar .env.production como base):**
+- `VITE_API_URL=http://66.23.233.50:8020/api` - URL directa al backend
+- `VITE_APP_URL=http://66.23.233.50:8020` - URL pública del frontend
+
+#### ⚠️ Solución de Problemas Comunes
+
+**Error 404 en /auth/login/:**
+El backend Django requiere que las rutas de autenticación estén bajo `/api/auth/login/`. 
+Asegúrate de que:
+1. `VITE_API_URL` esté configurado correctamente
+2. En desarrollo use `/api` para aprovechar el proxy de Vite
+3. En producción use la URL completa con `/api` incluido
 
 ### Desarrollo
 ```bash

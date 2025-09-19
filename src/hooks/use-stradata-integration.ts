@@ -25,6 +25,11 @@ export const useStratadaIntegration = ({ terceroId }: UseStratadaIntegrationProp
     
     // Estados para modal
     const [modalConsultaAbierto, setModalConsultaAbierto] = useState(false);
+    
+    // NUEVO: Estados para pantalla de carga
+    const [mostrarPantallaCarga, setMostrarPantallaCarga] = useState(false);
+    const [tiempoInicioConsulta, setTiempoInicioConsulta] = useState<Date | null>(null);
+    const [consultaCompleta, setConsultaCompleta] = useState(false);
 
     /**
      * 📋 Obtiene el resumen de personas asociadas al tercero
@@ -69,22 +74,42 @@ export const useStratadaIntegration = ({ terceroId }: UseStratadaIntegrationProp
         }
 
         setConsultandoStradata(true);
+        setMostrarPantallaCarga(true); // Mostrar pantalla de carga
+        setTiempoInicioConsulta(new Date()); // Registrar tiempo de inicio
+        setConsultaCompleta(false); // Resetear estado de completado
+        
         try {
             console.log(`🔍 Ejecutando consulta Stradata integrada para tercero: ${terceroId}`);
             
             const resultado = await stradataService.consultarTerceroStradata(terceroId, credenciales);
             setResultadoConsulta(resultado);
             
-            if (resultado.success) {
+            // Verificar éxito basándose en la presencia de personas_consultadas
+            const esExitoso = resultado.success === true || (resultado.personas_consultadas !== undefined && resultado.personas_consultadas >= 0);
+            
+            console.log(`🔍 Debug - Resultado consulta:`, {
+                success: resultado.success,
+                personas_consultadas: resultado.personas_consultadas,
+                esExitoso
+            });
+            
+            if (esExitoso) {
+                console.log('✅ Mostrando toast de éxito');
+                setConsultaCompleta(true); // Marcar como completada
+                
                 toast({
-                    title: "✅ Consulta exitosa",
-                    description: `Se consultaron ${resultado.personas_consultadas || 0} personas exitosamente`,
-                    variant: "success"
+                    title: "✅ Consulta enviada exitosamente",
+                    description: `Se ejecutó la consulta para ${resultado.personas_consultadas || 0} persona${resultado.personas_consultadas !== 1 ? 's' : ''}. Revise su correo electrónico para ver los resultados.`,
+                    variant: "default",
+                    duration: 10000 // Mostrar por más tiempo para que lean bien el mensaje
                 });
                 
-                // Cerrar modal después de consulta exitosa
-                setModalConsultaAbierto(false);
+                // Esperar un momento para mostrar progreso completo antes de cerrar
+                setTimeout(() => {
+                    setModalConsultaAbierto(false);
+                }, 2000); // 2 segundos para ver el progreso al 100%
             } else {
+                console.log('❌ Mostrando toast de error');
                 toast({
                     title: "❌ Error en consulta",
                     description: resultado.error || "No se pudo realizar la consulta",
@@ -96,14 +121,32 @@ export const useStratadaIntegration = ({ terceroId }: UseStratadaIntegrationProp
             return resultado;
         } catch (error) {
             console.error('❌ Error en consulta integrada:', error);
+            
+            // Manejar diferentes tipos de errores
+            let errorMessage = "No se pudo conectar con Stradata";
+            if (error instanceof Error) {
+                if (error.message.includes('timeout')) {
+                    errorMessage = "La consulta está tardando más de lo esperado. Se ejecutará en background y recibirás los resultados por correo.";
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
             toast({
                 title: "❌ Error de conexión",
-                description: error instanceof Error ? error.message : "No se pudo conectar con Stradata",
-                variant: "destructive"
+                description: errorMessage,
+                variant: "destructive",
+                duration: 10000
             });
             return null;
         } finally {
             setConsultandoStradata(false);
+            // No ocultar pantalla de carga aquí, se hace con el timeout para mostrar progreso completo
+            setTimeout(() => {
+                setMostrarPantallaCarga(false);
+                setTiempoInicioConsulta(null);
+                setConsultaCompleta(false);
+            }, 2500); // Un poco más que el timeout anterior
         }
     }, [terceroId, stradataService, toast]);
 
@@ -126,6 +169,9 @@ export const useStratadaIntegration = ({ terceroId }: UseStratadaIntegrationProp
         setResumenPersonas(null);
         setResultadoConsulta(null);
         setModalConsultaAbierto(false);
+        setMostrarPantallaCarga(false);
+        setTiempoInicioConsulta(null);
+        setConsultaCompleta(false);
     }, []);
 
     return {
@@ -136,6 +182,11 @@ export const useStratadaIntegration = ({ terceroId }: UseStratadaIntegrationProp
         resultadoConsulta,
         modalConsultaAbierto,
         
+        // NUEVOS: Estados para pantalla de carga
+        mostrarPantallaCarga,
+        tiempoInicioConsulta,
+        consultaCompleta,
+        
         // Acciones
         obtenerResumenPersonas,
         ejecutarConsultaIntegrada,
@@ -145,6 +196,13 @@ export const useStratadaIntegration = ({ terceroId }: UseStratadaIntegrationProp
         // Control de modal
         abrirModalConsulta: () => setModalConsultaAbierto(true),
         cerrarModalConsulta: () => setModalConsultaAbierto(false),
+        
+        // NUEVO: Control de pantalla de carga
+        cerrarPantallaCarga: () => {
+            setMostrarPantallaCarga(false);
+            setTiempoInicioConsulta(null);
+            setConsultaCompleta(false);
+        },
         
         // Datos computados
         totalPersonasConsultar: resumenPersonas?.resumen?.total_personas_consultar || 0,

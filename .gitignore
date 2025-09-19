@@ -23,5 +23,6 @@ dist-ssr
 *.sw?
 .env
 .env.example
+.env.production
 dist/
 *.tsbuildinfo
