@@ -171,7 +171,7 @@ const documentosRequeridos: { [key: string]: DocumentoConfig[] } = {
         { key: "certificacion-bancaria", label: "Certificación de cuenta bancaria (vigencia menor a 30 días)", required: true, icon: Shield },
         { key: "certificacion-comercial-1", label: "Certificación comercial #1", required: false, icon: Building2 },
         { key: "certificacion-comercial-2", label: "Certificación comercial #2", required: false, icon: Building2 },
-        { key: "composicion-accionaria", label: "Composición Accionaria certificada (vigencia del año en curso)", required: false, icon: Users, multiple: true },
+        { key: "composicion-accionaria", label: "Composición Accionaria certificada (vigencia del año en curso) con información de los beneficiarios finales", required: false, icon: Users, multiple: true },
 
     ],
     "publica": [
@@ -1148,16 +1148,26 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                     });
                 }
 
-                console.log('📤 Enviando a POST /api/terceros/...');
+                // Logging adicional para debugging
+                console.log('� Detalles de la solicitud:', {
+                    url: `${API_CONFIG.baseURL}/terceros/`,
+                    method: 'POST',
+                    contentType: 'multipart/form-data',
+                    documentsCount: Object.keys(documentos).filter(key => documentos[key]).length,
+                    timestamp: new Date().toISOString()
+                });
+
+                console.log('�📤 Enviando a POST /api/terceros/...');
 
                 // Usar endpoint público /api/terceros/ que acepta registros sin autenticación
                 const response = await axios.post(
-                    `http://localhost:8000/api/terceros/`,  // ✅ URL corregida
+                    `${API_CONFIG.baseURL}/terceros/`,  // ✅ URL usando variables de entorno
                     formData,
                     {
                         headers: {
                             'Content-Type': 'multipart/form-data',
                         },
+                        timeout: 30000, // 30 segundos timeout
                     }
                 );
 
@@ -1494,6 +1504,26 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 if (error.title && error.message) {
                     errorTitle = error.title;
                     errorMessage = error.message;
+                }
+                // Manejar error 429 - Rate Limiting
+                else if (error.response?.status === 429) {
+                    errorTitle = "⏱️ Muchas Solicitudes";
+                    errorMessage = "Has enviado muchas solicitudes recientemente. Por favor espera unos minutos antes de intentar nuevamente.";
+                }
+                // Manejar error 500 - Internal Server Error
+                else if (error.response?.status === 500) {
+                    errorTitle = "🔧 Error del Servidor";
+                    errorMessage = "El servidor está experimentando problemas técnicos. Por favor contacta al administrador del sistema o intenta nuevamente en unos minutos.";
+                    
+                    // Log adicional para debugging del error 500
+                    console.error('🚨 ERROR 500 - Detalles del servidor:', {
+                        url: error.config?.url,
+                        method: error.config?.method,
+                        status: error.response?.status,
+                        statusText: error.response?.statusText,
+                        headers: error.response?.headers,
+                        responseSize: error.response?.data?.length || 'unknown'
+                    });
                 }
                 // Mantener compatibilidad con errores legacy
                 else if (error.message && error.message.includes('Error HTTP:')) {
