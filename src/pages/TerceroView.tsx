@@ -61,10 +61,21 @@ const getInformacionContacto = (tercero: TerceroData) => {
 };
 
 const getNombreCompleto = (tercero: TerceroData) => {
+    // Para personas naturales, usar nombres y apellidos
     if (tercero.tipo_persona === 'natural') {
-        return `${tercero.nombres || ''} ${tercero.apellidos || ''}`.trim();
+        const nombreCompleto = `${tercero.nombres || ''} ${tercero.apellidos || ''}`.trim();
+        if (nombreCompleto) {
+            return nombreCompleto;
+        }
     }
-    return tercero.razon_social || tercero.nombreRazonSocial || 'Sin nombre';
+
+    // Para personas jurídicas, usar razon_social o nombres como fallback
+    if (tercero.tipo_persona === 'juridica') {
+        return tercero.razon_social || tercero.nombres || 'Sin nombre';
+    }
+
+    // Fallback general
+    return tercero.razon_social || tercero.nombreRazonSocial || tercero.nombres || 'Sin nombre';
 };
 
 const formatearMoneda = (value: string | number | undefined) => {
@@ -202,6 +213,7 @@ interface TerceroData {
     nombres?: string;
     apellidos?: string;
     razon_social?: string;
+    nombre_completo?: string; // 🔧 Campo que realmente envía el backend
     nombreRazonSocial?: string; // Campo del formulario
     email: string;
     telefono?: string;
@@ -213,6 +225,16 @@ interface TerceroData {
     fecha_nacimiento?: string;
     actividad_economica_principal?: string;
     codigo_ciiu?: string;
+
+    // 🆕 Nuevos campos de contacto y activos virtuales (2025)
+    nombre_persona_contacto?: string;
+    nombrePersonaContacto?: string;
+    cargo_persona_contacto?: string;
+    cargoPersonaContacto?: string;
+    manejo_activos_virtuales?: boolean;
+    manejoActivosVirtuales?: boolean;
+    detalle_activos_virtuales?: string;
+    detalleActivosVirtuales?: string;
 
     // Información Tributaria - Campos duplicados del backend
     responsable_iva?: boolean;
@@ -434,7 +456,7 @@ interface DocumentoTercero {
     updated_at: string;
 }
 
-export default function TerceroView() {
+function TerceroView() {
 
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
@@ -497,6 +519,9 @@ export default function TerceroView() {
         cargando: cargandoStradata
     } = useStratadaIntegration({ terceroId: tercero?.id || '' });
 
+    // Debug logging para modal
+    console.log('🔍 TerceroView - Estado modal consulta:', modalConsultaAbierto);
+
 
 
     // Estados para usuarios disponibles
@@ -520,6 +545,7 @@ export default function TerceroView() {
 
     // Función para abrir modal de consulta (LEGACY)
     const abrirModalConsulta = () => {
+        console.log('🔍 abrirModalConsulta - Iniciando consulta completa...');
         // Usar la nueva funcionalidad integrada
         iniciarConsultaCompleta();
     };
@@ -747,10 +773,16 @@ export default function TerceroView() {
     };
 
     const getDisplayName = (tercero: TerceroData) => {
+        // Para personas naturales, usar nombres y apellidos
         if (tercero.tipo_persona === 'natural') {
-            return `${tercero.nombres || ''} ${tercero.apellidos || ''}`.trim();
+            const nombreCompleto = `${tercero.nombres || ''} ${tercero.apellidos || ''}`.trim();
+            if (nombreCompleto) {
+                return nombreCompleto;
+            }
         }
-        return tercero.razon_social || 'Sin nombre';
+
+        // Para personas jurídicas, usar razon_social o nombres como fallback
+        return tercero.razon_social || tercero.nombres || 'Sin nombre';
     };
 
     const formatDocumentType = (tipoDocumento: string) => {
@@ -1174,6 +1206,12 @@ export default function TerceroView() {
     const getConstituyePatrimoniosAutonomos = () => getBooleanValue(tercero.constituyePatrimoniosAutonomos, tercero.constituye_patrimonios_autonomos);
     const getDeclaracionTransparencia = () => getBooleanValue(tercero.declaracionTransparencia, tercero.declaracion_transparencia);
 
+    // 🆕 Funciones para nuevos campos de contacto y activos virtuales
+    const getNombrePersonaContacto = () => getStringValue(tercero.nombrePersonaContacto, tercero.nombre_persona_contacto);
+    const getCargoPersonaContacto = () => getStringValue(tercero.cargoPersonaContacto, tercero.cargo_persona_contacto);
+    const getManejoActivosVirtuales = () => getBooleanValue(tercero.manejoActivosVirtuales, tercero.manejo_activos_virtuales);
+    const getDetalleActivosVirtuales = () => getStringValue(tercero.detalleActivosVirtuales, tercero.detalle_activos_virtuales);
+
     // Función especial para obtener representantes (puede venir como string JSON)
     const getRepresentantesArray = (tercero: TerceroData) => {
         console.log('🔍 TerceroView - getRepresentantesArray - tercero.representantes:', tercero.representantes);
@@ -1197,21 +1235,32 @@ export default function TerceroView() {
     const getAccionistasArray = (tercero: TerceroData) => {
         console.log('🔍 TerceroView - getAccionistasArray - tercero.accionistas:', tercero.accionistas);
         console.log('🔍 TerceroView - getAccionistasArray - tercero.accionistas_frontend:', tercero.accionistas_frontend);
-        // Buscar en diferentes posibles nombres del campo
-        const accs = tercero.accionistas || tercero.accionistas_frontend;
-        if (!accs) return [];
-        if (typeof accs === 'string') {
+        
+        // USAR SIEMPRE tercero.accionistas (estructura jerárquica del backend)
+        if (tercero.accionistas && Array.isArray(tercero.accionistas)) {
+            console.log('🔍 TerceroView - Usando estructura jerárquica del backend:', tercero.accionistas);
+            return tercero.accionistas;
+        }
+        
+        // Si tercero.accionistas es string, parsearlo
+        if (tercero.accionistas && typeof tercero.accionistas === 'string') {
             try {
-                const parsed = JSON.parse(accs);
-                console.log('🔍 TerceroView - Accionistas parseados:', parsed);
+                const parsed = JSON.parse(tercero.accionistas);
+                console.log('🔍 TerceroView - Accionistas parseados desde string:', parsed);
                 return Array.isArray(parsed) ? parsed : [];
             } catch (error) {
                 console.error('❌ Error parseando accionistas:', error);
-                return [];
             }
         }
-        console.log('🔍 TerceroView - Accionistas directos:', accs);
-        return Array.isArray(accs) ? accs : [];
+        
+        // Solo como último recurso, usar accionistas_frontend (estructura plana)
+        if (tercero.accionistas_frontend && Array.isArray(tercero.accionistas_frontend)) {
+            console.log('🔍 TerceroView - Fallback a estructura plana:', tercero.accionistas_frontend);
+            return tercero.accionistas_frontend;
+        }
+        
+        console.log('🔍 TerceroView - No hay accionistas disponibles');
+        return [];
     };
 
     // 🚀 FUNCIÓN ACTUALIZADA: Usar helper con compatibilidad dual
@@ -1546,7 +1595,7 @@ export default function TerceroView() {
                                 ) : (
                                     <div>
                                         <label className="text-sm font-medium text-gray-700">Razón Social</label>
-                                        <p className="text-gray-900">{tercero.razon_social || 'No especificado'}</p>
+                                        <p className="text-gray-900">{tercero.razon_social || tercero.nombres || 'No especificado'}</p>
                                     </div>
                                 )}
                             </CardContent>
@@ -1609,6 +1658,58 @@ export default function TerceroView() {
                                         <p className="text-gray-900">{tercero.pais || 'No especificado'}</p>
                                     </div>
                                 </div>
+
+                                {/* 🆕 Información de Persona de Contacto */}
+                                {(getNombrePersonaContacto() || getCargoPersonaContacto()) && (
+                                    <div className="border-t pt-4">
+                                        <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                                            <User className="h-4 w-4 text-[#0052CC]" />
+                                            Persona de Contacto
+                                        </h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {getNombrePersonaContacto() && (
+                                                <div>
+                                                    <label className="text-sm font-medium text-gray-700">Nombre</label>
+                                                    <p className="text-gray-900">{getNombrePersonaContacto()}</p>
+                                                </div>
+                                            )}
+                                            {getCargoPersonaContacto() && (
+                                                <div>
+                                                    <label className="text-sm font-medium text-gray-700">Cargo</label>
+                                                    <p className="text-gray-900">{getCargoPersonaContacto()}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 🆕 Información de Activos Virtuales */}
+                                {getManejoActivosVirtuales() && (
+                                    <div className="border-t pt-4">
+                                        <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                                            <span className="h-4 w-4 text-[#0052CC] font-bold">₿</span>
+                                            Activos Virtuales
+                                        </h4>
+                                        <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-4 rounded-lg border border-purple-200">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                                                    ACTIVO
+                                                </span>
+                                                <span className="text-sm font-medium text-gray-700">
+                                                    Maneja activos virtuales (criptomonedas, NFT, tokens)
+                                                </span>
+                                            </div>
+                                            {getDetalleActivosVirtuales() && (
+                                                <div>
+                                                    <label className="text-sm font-medium text-gray-700">Detalle de activos:</label>
+                                                    <p className="text-gray-900 mt-1 bg-white p-2 rounded border">
+                                                        {getDetalleActivosVirtuales()}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
 
@@ -1925,53 +2026,20 @@ export default function TerceroView() {
                             </Card>
                         )}
 
-                        {/* Accionistas del Formulario */}
+                        {/* 🆕 Estructura Accionaria Jerárquica */}
                         {getAccionistasArray(tercero).length > 0 && (
                             <Card className="shadow-lg border-orange-200 border">
                                 <CardHeader>
                                     <CardTitle className="text-[#0052CC] flex items-center gap-2">
                                         <CreditCard className="h-5 w-5" />
-                                        Accionistas (Formulario)
+                                        Composición Accionaria
                                     </CardTitle>
+                                    <CardDescription>
+                                        Estructura jerárquica de propiedad y participación
+                                    </CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="space-y-4">
-                                        {getAccionistasArray(tercero).map((accionista, index) => (
-                                            <div key={index} className="p-4 bg-orange-50 rounded-lg border border-orange-100">
-                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                    <div>
-                                                        <label className="text-sm font-medium text-gray-700">Nombre Completo</label>
-                                                        <p className="text-gray-900">{accionista.nombre || accionista.nombreCompleto || ''}</p>
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-sm font-medium text-gray-700">Documento</label>
-                                                        <p className="text-gray-900">{(accionista.tipo_identificacion || accionista.tipoIdentificacion || '') && `${accionista.tipo_identificacion || accionista.tipoIdentificacion} `}{accionista.numero_identificacion || accionista.numeroIdentificacion || ''}</p>
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-sm font-medium text-gray-700">Participación</label>
-                                                        <p className="text-gray-900 font-semibold text-orange-600">{accionista.porcentaje_participacion || ''}%</p>
-                                                    </div>
-                                                    {/* Solo mostrar dirección y teléfono si existen */}
-                                                    {(accionista.direccion || accionista.telefono) && (
-                                                        <>
-                                                            {accionista.direccion && (
-                                                                <div>
-                                                                    <label className="text-sm font-medium text-gray-700">Dirección</label>
-                                                                    <p className="text-gray-900">{accionista.direccion}</p>
-                                                                </div>
-                                                            )}
-                                                            {accionista.telefono && (
-                                                                <div>
-                                                                    <label className="text-sm font-medium text-gray-700">Teléfono</label>
-                                                                    <p className="text-gray-900">{accionista.telefono}</p>
-                                                                </div>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <AccionistasJerarquicos accionistas={getAccionistasArray(tercero)} />
                                 </CardContent>
                             </Card>
                         )}
@@ -3750,7 +3818,7 @@ export default function TerceroView() {
             {/* 🆕 Modal de Consulta Stradata Integrado */}
             <ConsultaStrataModal
                 terceroId={id || ''}
-                terceroNombre={terceroNombreStradata || (tercero?.tipo_persona === 'juridica' ? (tercero?.razon_social || tercero?.nombreRazonSocial || '') : `${tercero?.nombres || ''} ${tercero?.apellidos || ''}`.trim())}
+                terceroNombre={terceroNombreStradata || (tercero?.tipo_persona === 'juridica' ? (tercero?.razon_social || tercero?.nombres || tercero?.nombreRazonSocial || '') : `${tercero?.nombres || ''} ${tercero?.apellidos || ''}`.trim())}
                 isOpen={modalConsultaAbierto}
                 onClose={cerrarModalStratadaIntegrado}
                 onSuccess={(resultado) => {
@@ -3764,7 +3832,7 @@ export default function TerceroView() {
             {/* 🆕 Pantalla de carga para consulta Stradata */}
             <StratadaLoadingOverlay
                 isOpen={mostrarPantallaCarga}
-                terceroNombre={terceroNombreStradata || (tercero?.tipo_persona === 'juridica' ? (tercero?.razon_social || tercero?.nombreRazonSocial || '') : `${tercero?.nombres || ''} ${tercero?.apellidos || ''}`.trim())}
+                terceroNombre={terceroNombreStradata || (tercero?.tipo_persona === 'juridica' ? (tercero?.razon_social || tercero?.nombres || tercero?.nombreRazonSocial || '') : `${tercero?.nombres || ''} ${tercero?.apellidos || ''}`.trim())}
                 totalPersonas={totalPersonasConsultar}
                 timeElapsed={tiempoInicioConsulta ? Math.floor((new Date().getTime() - tiempoInicioConsulta.getTime()) / 1000) : 0}
                 estimatedTimeMinutes={3}
@@ -4029,3 +4097,148 @@ const UploadStratadaDocumentForm = ({
         </form>
     );
 };
+
+// Componente para mostrar estructura jerárquica de accionistas
+const AccionistasJerarquicos = ({ accionistas }: { accionistas: any[] }) => {
+    console.log("📊 Datos de accionistas recibidos:", accionistas);
+    
+    // El backend ya envía la estructura jerárquica correcta
+    // Los accionistas principales tienen empresaPadre="MATRIZ" y subAccionistas como array
+    const accionistasPrincipales = accionistas.filter(acc => acc.empresaPadre === "MATRIZ");
+    
+    console.log("👑 Accionistas principales:", accionistasPrincipales);
+    
+    // Calcular total de participación de accionistas principales
+    const totalPrincipal = accionistasPrincipales.reduce((sum, acc) => {
+        const porcentaje = parseFloat(acc.porcentaje || acc.porcentajeParticipacion || acc.porcentaje_participacion || '0');
+        return sum + porcentaje;
+    }, 0);
+
+    const AccionistaItem = ({ accionista, nivel = 0 }: { accionista: any; nivel?: number }) => {
+        const porcentaje = parseFloat(accionista.porcentaje || accionista.porcentajeParticipacion || accionista.porcentaje_participacion || '0');
+        const nombre = accionista.nombre || accionista.nombreCompleto || '';
+        const documento = `${accionista.tipo_identificacion || accionista.tipoIdentificacion || accionista.tipo || ''} ${accionista.numero_identificacion || accionista.numeroIdentificacion || accionista.identificacion || ''}`.trim();
+        
+        // Los sub-accionistas ya vienen en el campo subAccionistas del backend
+        const subAccionistas = accionista.subAccionistas || [];
+        const totalSubAccionistas = subAccionistas.reduce((sum: number, sub: any) => {
+            const subPorcentaje = parseFloat(sub.porcentaje || sub.porcentajeParticipacion || sub.porcentaje_participacion || '0');
+            return sum + subPorcentaje;
+        }, 0);
+
+        const marginLeft = nivel * 20;
+
+        return (
+            <div key={`${nombre}-${documento}-${nivel}`} style={{ marginLeft: `${marginLeft}px` }}>
+                <div className={`p-4 border-l-4 ${nivel === 0 ? 'border-orange-500 bg-orange-50' : 'border-blue-400 bg-blue-50'} rounded-lg mb-3`}>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="md:col-span-2">
+                            <div className="flex items-center gap-2">
+                                {nivel > 0 && <span className="text-blue-600 text-sm">└─</span>}
+                                <label className="text-sm font-medium text-gray-700">
+                                    {nivel === 0 ? 'Accionista Principal' : 'Sub-accionista'}
+                                </label>
+                            </div>
+                            <p className="text-gray-900 font-semibold">{nombre}</p>
+                            {documento && <p className="text-sm text-gray-600">{documento}</p>}
+                            {nivel > 0 && accionista.empresaPadre && (
+                                <p className="text-xs text-blue-500">Empresa padre: {accionista.empresaPadre}</p>
+                            )}
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">Participación</label>
+                            <div className="flex items-center gap-2">
+                                <span className={`font-bold text-lg ${nivel === 0 ? 'text-orange-600' : 'text-blue-600'}`}>
+                                    {porcentaje.toFixed(2)}%
+                                </span>
+                                {nivel === 0 && subAccionistas.length > 0 && (
+                                    <span className="text-xs text-gray-500">
+                                        (desglosado abajo)
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                        <div>
+                            {nivel === 0 && subAccionistas.length > 0 && (
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700">Sub-accionistas</label>
+                                    <p className="text-sm text-blue-600">{subAccionistas.length} registrados</p>
+                                    <p className="text-xs text-gray-500">Total: {totalSubAccionistas.toFixed(2)}%</p>
+                                    {Math.abs(totalSubAccionistas - porcentaje) }
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    
+                    {/* Información adicional del accionista */}
+                    {(accionista.direccion || accionista.telefono) && (
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {accionista.direccion && (
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-700">Dirección</label>
+                                        <p className="text-sm text-gray-900">{accionista.direccion}</p>
+                                    </div>
+                                )}
+                                {accionista.telefono && (
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-700">Teléfono</label>
+                                        <p className="text-sm text-gray-900">{accionista.telefono}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Renderizar sub-accionistas usando la estructura del backend */}
+                {subAccionistas.length > 0 && (
+                    <div className="ml-4 mb-4">
+                        {subAccionistas.map((subAccionista: any, index: number) => (
+                            <AccionistaItem 
+                                key={`sub-${index}`} 
+                                accionista={subAccionista} 
+                                nivel={nivel + 1} 
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    return (
+        <div className="space-y-4">
+            {/* Resumen de participación total */}
+            <div className="p-4 bg-gray-100 rounded-lg border border-gray-200">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h4 className="font-semibold text-gray-900">Resumen de Participación</h4>
+                        <p className="text-sm text-gray-600">
+                            {accionistasPrincipales.length} accionista(s) principal(es)
+                            {accionistasPrincipales.some(acc => (acc.subAccionistas || []).length > 0) && 
+                                `, con ${accionistasPrincipales.reduce((total, acc) => total + (acc.subAccionistas || []).length, 0)} sub-accionista(s)`}
+                        </p>
+                    </div>
+                    <div className="text-right">
+                        <div className={`text-2xl font-bold ${Math.abs(totalPrincipal - 100) < 0.01 ? 'text-green-600' : 'text-red-600'}`}>
+                            {totalPrincipal.toFixed(2)}%
+                        </div>
+                        <div className={`text-sm ${Math.abs(totalPrincipal - 100) < 0.01 ? 'text-green-600' : 'text-red-600'}`}>
+                            {Math.abs(totalPrincipal - 100) < 0.01 ? '✓ Válido' : '⚠️ No suma 100%'}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Estructura jerárquica */}
+            <div className="space-y-3">
+                {accionistasPrincipales.map((accionista, index) => (
+                    <AccionistaItem key={index} accionista={accionista} nivel={0} />
+                ))}
+            </div>
+        </div>
+    );
+};
+
+export default TerceroView;

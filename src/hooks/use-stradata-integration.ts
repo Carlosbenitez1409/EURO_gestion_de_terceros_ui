@@ -154,11 +154,16 @@ export const useStratadaIntegration = ({ terceroId }: UseStratadaIntegrationProp
      * 🚀 Inicia el flujo completo de consulta (resumen + modal)
      */
     const iniciarConsultaCompleta = useCallback(async () => {
+        console.log('🔍 iniciarConsultaCompleta - Obteniendo resumen...');
         // Primero obtener el resumen
         const resumen = await obtenerResumenPersonas();
+        console.log('🔍 iniciarConsultaCompleta - Resumen obtenido:', resumen);
         if (resumen && resumen.success) {
+            console.log('🔍 iniciarConsultaCompleta - Abriendo modal de consulta...');
             // Abrir modal para credenciales
             setModalConsultaAbierto(true);
+        } else {
+            console.log('❌ iniciarConsultaCompleta - No se pudo obtener el resumen o no fue exitoso');
         }
     }, [obtenerResumenPersonas]);
 

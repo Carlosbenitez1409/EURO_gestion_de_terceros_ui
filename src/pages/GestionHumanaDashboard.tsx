@@ -136,6 +136,13 @@ export default function GestionHumanaDashboard({ userRole }: GestionHumanaDashbo
         patrimonioFiducia: false,
         relacionesComerciales: false,
         cuentasFinancierasExterior: false,  // Campo requerido por nueva estructura PEP
+        
+        // 👤 CAMPOS OBLIGATORIOS NUEVOS
+        nombrePersonaContacto: `${formData.nombres} ${formData.apellidos}`,
+        cargoPersonaContacto: "Empleado",
+        manejoActivosVirtuales: false,
+        detalleActivosVirtuales: "",
+        
         representantes: [],
         accionistas_frontend: [],
         pais: "Colombia"

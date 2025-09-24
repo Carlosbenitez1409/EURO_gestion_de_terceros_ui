@@ -37,6 +37,7 @@ interface TerceroData {
     nombres: string;
     apellidos?: string;
     razon_social?: string;
+    nombre_completo?: string; // 🔧 Campo que realmente envía el backend
     email: string;
     telefono: string;
     direccion: string;
@@ -184,6 +185,10 @@ export default function TerceroEdit() {
                 const data = await tercerosDRFService.getTercero(id!);
 
                 console.log('🔍 TerceroEdit - Datos del tercero cargados:', data);
+                console.log('🔍 TerceroEdit - razon_social:', data.razon_social);
+                console.log('🔍 TerceroEdit - nombre_completo:', data.nombre_completo);
+                console.log('🔍 TerceroEdit - nombres:', data.nombres);
+                console.log('🔍 TerceroEdit - apellidos:', data.apellidos);
 
                 // 🆕 MAPEAR ESTADOS LEGACY Y CAMPOS DE ASIGNACIÓN CENTRALIZADOS
                 const estadoMapeado = mapearEstadoLegacy(data.estado_aprobacion);
@@ -192,6 +197,8 @@ export default function TerceroEdit() {
                 const mappedData: TerceroData = {
                     ...data,
                     estado_aprobacion: estadoMapeado, // 🔧 Aplicar mapeo de estado
+                    // 🔧 Para personas jurídicas, si razon_social es null, usar nombres
+                    razon_social: data.razon_social || (data.tipo_persona === 'juridica' ? data.nombres : ''),
                     // Campos derivados para mostrar en UI
                     usuario_asignado_nombre: data.usuario_asignado?.full_name ||
                         `${data.usuario_asignado?.first_name} ${data.usuario_asignado?.last_name}`.trim() ||
@@ -201,6 +208,7 @@ export default function TerceroEdit() {
                 };
 
                 console.log('📥 Datos mapeados:', mappedData);
+                console.log('📥 razon_social final:', mappedData.razon_social);
 
                 setFormData(mappedData);
                 setOriginalData({ ...data, estado_aprobacion: estadoMapeado }); // Guardar también con estado mapeado

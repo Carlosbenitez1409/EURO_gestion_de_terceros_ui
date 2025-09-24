@@ -17,6 +17,7 @@ export interface TerceroDRF {
   nombres: string;
   apellidos?: string;
   razon_social?: string;
+  nombre_completo?: string; // 🔧 Campo que realmente envía el backend
   email: string;
   telefono: string;
   direccion: string;
@@ -79,7 +80,7 @@ export interface TerceroApprovalResponse extends TerceroDRF {
 export interface TerceroCreateRequest {
     // 🆔 IDENTIFICACIÓN BÁSICA
     id?: string;
-    tipo_documento: "CC" | "CE" | "PA" | "NIT";
+    tipo_documento: "CC" | "CE" | "PA" | "NIT" | "OTRO";
     numero_documento: string;
     digito_verificacion?: string;
     tipo_persona: "natural" | "juridica" | "publica";
@@ -97,6 +98,10 @@ export interface TerceroCreateRequest {
     telefono: string;
     celular?: string;
     email: string;
+
+    // 👤 INFORMACIÓN DE CONTACTO ADICIONAL
+    nombrePersonaContacto: string;                  // Nombre persona de contacto (obligatorio)
+    cargoPersonaContacto: string;                   // Cargo persona de contacto (obligatorio)
     
     // 🏢 ACTIVIDAD ECONÓMICA
     actividad_economica_principal: string;          // Descripción actividad
@@ -127,6 +132,8 @@ export interface TerceroCreateRequest {
     // 🌍 OPERACIONES COMERCIALES
     operacionesMonedaExtranjera: boolean;           // Opera en moneda extranjera
     tiposOperacionesMonedaExtranjera: string[];     // Tipos de operaciones
+    manejoActivosVirtuales: boolean;                // Maneja activos virtuales
+    detalleActivosVirtuales?: string;               // Detalle de activos virtuales
     observaciones?: string;                         // Observaciones generales
     
     // 🛡️ DECLARACIONES SARLAFT/PEP

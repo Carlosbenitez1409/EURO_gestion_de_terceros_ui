@@ -38,10 +38,15 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import logoEuro from "@/assets/supermercadoseleuro.png";
-import { ubicacionesService, type Pais, type Departamento, type Ciudad } from "@/services/ubicaciones.service";
+import SubAccionistasExcel from "@/components/SubAccionistasExcel";
 import { tercerosDRFService, type TerceroCreateRequest, type TerceroPublicRegistrationResponse } from "@/services/terceros.drf.service";
 import { API_CONFIG } from "@/lib/api.client";
 import { formatearMoneda } from "@/utils/dataHelpers";
+import { type Country, type City } from "@/types/ubicaciones.types";
+
+// Importar los JSON directamente
+import countriesData from "../../json/country.json";
+import citiesData from "../../json/cities.json";
 
 interface Representante {
     nombreCompleto: string;
@@ -52,10 +57,17 @@ interface Representante {
 }
 
 interface Accionista {
+    empresaPadre: string;
     nombre: string;
-    tipoIdentificacion: string;
-    numeroIdentificacion: string;
-    porcentajeParticipacion: number;
+    identificacion: string;
+    tipo: string;
+    porcentaje: number;
+    subAccionistas: Accionista[];
+    
+    // Campos legacy para compatibilidad (se mantienen temporalmente)
+    tipoIdentificacion?: string;
+    numeroIdentificacion?: string;
+    porcentajeParticipacion?: number;
 }
 
 interface RegistroData {
@@ -79,6 +91,10 @@ interface RegistroData {
     telefono: string;
     celular: string;
     correoElectronico: string;
+
+    // Campos de contacto (obligatorios)
+    nombrePersonaContacto: string;
+    cargoPersonaContacto: string;
 
     // 2. Información General y Representantes
     representantes: Representante[];
@@ -107,6 +123,8 @@ interface RegistroData {
     // 4. Operaciones, Observaciones y Pago
     operacionesMonedaExtranjera: boolean;
     tiposOperacionesMonedaExtranjera: string[];
+    manejoActivosVirtuales: boolean;
+    detalleActivosVirtuales?: string;
     observaciones: string;
 
     // 5. Documentos
@@ -117,7 +135,7 @@ interface RegistroData {
     detallesPEP?: string; // Nuevo campo para detalles de PEP
     informacionPEP?: Array<{
         nombre: string;
-        tipo: "CC" | "CE" | "NIT" | "PASAPORTE"; // Tipos de identificación disponibles
+        tipo: "CC" | "CE" | "NIT" | "PASAPORTE" | "EX" | "OTRO"; // Tipos de identificación disponibles
         numero_identificacion: string; // Cambiado para coincidir con backend
         cargo: string;
         parentesco: string;
@@ -155,7 +173,6 @@ const documentosRequeridos: { [key: string]: DocumentoConfig[] } = {
         { key: "documento-identidad", label: "Documento de identidad", required: true, icon: CreditCard },
         { key: "rut", label: "RUT (vigencia menor a 60 días)", required: true, icon: FileText },
         { key: "certificacion-bancaria", label: "Certificación bancaria (vigencia menor a 30 días)", required: true, icon: Shield },
-        { key: "firma", label: "Firma autorizada", required: true, icon: FileCheck },
         { key: "estados-financieros", label: "Estados financieros comparativos 2 años (últimos dos periodos contables opcional)", required: false, icon: Building2 },
         { key: "declaracion-renta", label: "Declaración de renta (último año opcional)", required: false, icon: FileText },
         { key: "certificacion-comercial", label: "Certificación comercial (vigencia menor a 60 días opcional)", required: false, icon: Building2, multiple: true },
@@ -165,7 +182,6 @@ const documentosRequeridos: { [key: string]: DocumentoConfig[] } = {
         { key: "documento-identidad-rep", label: "Documento de identidad del Representante Legal", required: true, icon: User },
         { key: "rut", label: "RUT (vigencia menor a 60 días)", required: true, icon: FileText },
         { key: "certificado-existencia", label: "Cámara de Comercio (vigencia menor a 60 días)", required: true, icon: FileCheck },
-        { key: "firma", label: "Firma autorizada", required: true, icon: FileCheck },
         { key: "estados-financieros", label: "Estados financieros comparativos 2 años (últimos dos periodos contables)", required: true, icon: Building2 },
         { key: "declaracion-renta", label: "Declaración de renta (del año anterior)", required: true, icon: FileText },
         { key: "certificacion-bancaria", label: "Certificación de cuenta bancaria (vigencia menor a 30 días)", required: true, icon: Shield },
@@ -203,10 +219,9 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Estados para ubicaciones jerárquicas
-    const [paises, setPaises] = useState<Pais[]>([]);
-    const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
-    const [ciudades, setCiudades] = useState<Ciudad[]>([]);
-    const [loadingDepartamentos, setLoadingDepartamentos] = useState(false);
+    const [paises, setPaises] = useState<Country[]>([]);
+    const [ciudades, setCiudades] = useState<City[]>([]);
+    const [ciudadesFiltradas, setCiudadesFiltradas] = useState<City[]>([]);
     const [loadingCiudades, setLoadingCiudades] = useState(false);
 
     // Estado para comerciales
@@ -235,6 +250,10 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
         celular: "",
         correoElectronico: "",
 
+        // Campos de contacto
+        nombrePersonaContacto: "",
+        cargoPersonaContacto: "",
+
         // 2. Información General y Representantes
         representantes: [],
         accionistas: [],
@@ -262,6 +281,8 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
         // 4. Operaciones, Observaciones y Pago
         operacionesMonedaExtranjera: false,
         tiposOperacionesMonedaExtranjera: [],
+        manejoActivosVirtuales: false,
+        detalleActivosVirtuales: "",
         observaciones: "",
 
         // 5. Documentos
@@ -369,22 +390,47 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
         }
     }, [formData.ingresoMensual, formData.otrosIngresos]);
 
-    // Effect para cargar países al montar el componente
+    // Effect para cargar países y ciudades al montar el componente
     useEffect(() => {
-        const loadPaises = async () => {
+        const loadUbicaciones = async () => {
             try {
-                const paisesData = await ubicacionesService.getPaises();
-                setPaises(paisesData);
+                // Cargar países desde JSON
+                const paisesData = countriesData as Country[];
+                
+                // Poner Colombia al inicio del array para que sea la primera opción
+                const colombia = paisesData.find(p => p.short_alpha_code === 'CO');
+                const otrosPaises = paisesData.filter(p => p.short_alpha_code !== 'CO');
+                const paisesOrdenados = colombia ? [colombia, ...otrosPaises] : paisesData;
+                
+                setPaises(paisesOrdenados);
+                console.log(`🌎 Países cargados: ${paisesOrdenados.length}`);
+                console.log(`🥇 Primer país en el array:`, paisesOrdenados[0]);
+                console.log(`🇨🇴 Colombia en el array:`, colombia);
 
-                // Si el país por defecto es Colombia, cargar sus departamentos
-                if (formData.pais === 'CO') {
-                    loadDepartamentos('CO');
+                // Verificar el país inicial en formData
+                console.log(`🔍 Estado actual de formData.pais:`, formData.pais);
+                
+                // Si el país por defecto es Colombia (CO), filtrar ciudades colombianas
+                const paisInicial = formData.pais || 'CO';
+                console.log(`🇨🇴 País inicial determinado: ${paisInicial}`);
+                
+                if (paisInicial && paisInicial !== 'OTHER') {
+                    const paisSeleccionado = paisesOrdenados.find(p => p.short_alpha_code === paisInicial);
+                    console.log(`🔍 País encontrado en JSON:`, paisSeleccionado);
+                    
+                    if (paisSeleccionado) {
+                        const ciudadesDelPais = (citiesData as City[]).filter(c => c.country_id === paisSeleccionado.id);
+                        setCiudadesFiltradas(ciudadesDelPais);
+                        console.log(`🏙️ Ciudades iniciales cargadas para ${paisSeleccionado.name}: ${ciudadesDelPais.length}`);
+                    } else {
+                        console.log(`❌ No se encontró país con código: ${paisInicial}`);
+                    }
                 }
             } catch (error) {
-                console.error('Error loading países:', error);
+                console.error('Error loading ubicaciones:', error);
                 toast({
                     title: "Error",
-                    description: "No se pudieron cargar los países",
+                    description: "No se pudieron cargar los países y ciudades",
                     variant: "destructive"
                 });
             }
@@ -396,7 +442,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 // 🐛 DEBUG: Verificar configuraciones
                 console.log('� DEBUG API_CONFIG:', API_CONFIG);
                 console.log('🐛 DEBUG API_CONFIG.baseURL:', API_CONFIG.baseURL);
-                
+
                 // 🌐 Crear instancia de axios SIN interceptors de autenticación para endpoint público
                 const publicAxios = axios.create({
                     baseURL: API_CONFIG.baseURL,
@@ -406,7 +452,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                         'Accept': 'application/json'
                     }
                 });
-                
+
                 const url = `/public/comerciales-disponibles/`;
                 console.log(`🔍 Cargando comerciales desde endpoint público: ${API_CONFIG.baseURL}${url}`);
 
@@ -519,28 +565,38 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
             }
         };
 
-        loadPaises();
+        loadUbicaciones();
         loadComerciales();
     }, []);
 
-    // Effect para cargar departamentos al cambiar país
+    // Effect para cargar ciudades al cambiar país
     useEffect(() => {
+        console.log(`🔄 País cambió a: ${formData.pais}`);
         if (formData.pais && formData.pais !== 'OTHER') {
-            loadDepartamentos(formData.pais);
+            loadCiudadesPorPais(formData.pais);
         } else {
-            setDepartamentos([]);
-            setCiudades([]);
+            setCiudadesFiltradas([]);
         }
     }, [formData.pais]);
 
-    // Effect para cargar ciudades al cambiar departamento
+    // Effect para cargar ciudades iniciales cuando se cargan los países
     useEffect(() => {
-        if (formData.departamento && formData.pais) {
-            loadCiudades(formData.departamento, formData.pais);
-        } else {
-            setCiudades([]);
+        if (paises.length > 0 && formData.pais && formData.pais !== 'OTHER') {
+            console.log(`🚀 Forzando carga inicial de ciudades para: ${formData.pais}`);
+            loadCiudadesPorPais(formData.pais);
         }
-    }, [formData.departamento, formData.pais]);
+    }, [paises, formData.pais]);
+
+    // Funciones helper para obtener nombres desde JSON
+    const getCiudadNameById = (ciudadId: string | number): string => {
+        const ciudad = (citiesData as City[]).find(c => c.id === Number(ciudadId));
+        return ciudad ? ciudad.name : String(ciudadId);
+    };
+
+    const getPaisNameById = (paisCode: string): string => {
+        const pais = (countriesData as Country[]).find(p => p.short_alpha_code === paisCode);
+        return pais ? pais.name : paisCode;
+    };
 
     // Effect para limpiar comercial asignado cuando se selecciona "actualización"
     useEffect(() => {
@@ -557,49 +613,23 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
         }
     }, [formData.tipoFormulario]);
 
-    // Función para cargar departamentos
-    const loadDepartamentos = async (paisId: string) => {
-        if (!paisId || paisId === 'OTHER') {
-            setDepartamentos([]);
+    // Función para filtrar ciudades por país
+    const loadCiudadesPorPais = (paisCode: string) => {
+        if (!paisCode || paisCode === 'OTHER') {
+            setCiudadesFiltradas([]);
             return;
         }
 
-        setLoadingDepartamentos(true);
-        try {
-            const departamentosData = await ubicacionesService.getDepartamentos(paisId);
-            setDepartamentos(departamentosData);
-        } catch (error) {
-            console.error('Error loading departamentos:', error);
-            toast({
-                title: "Error",
-                description: "No se pudieron cargar los departamentos",
-                variant: "destructive"
-            });
-        } finally {
-            setLoadingDepartamentos(false);
-        }
-    };
-
-    // Función para cargar ciudades
-    const loadCiudades = async (departamentoId: string, paisId: string) => {
-        if (!departamentoId || !paisId) {
-            setCiudades([]);
-            return;
-        }
-
-        setLoadingCiudades(true);
-        try {
-            const ciudadesData = await ubicacionesService.getCiudades(departamentoId, paisId);
-            setCiudades(ciudadesData);
-        } catch (error) {
-            console.error('Error loading ciudades:', error);
-            toast({
-                title: "Error",
-                description: "No se pudieron cargar las ciudades",
-                variant: "destructive"
-            });
-        } finally {
-            setLoadingCiudades(false);
+        // Buscar el país por código
+        const paisSeleccionado = (countriesData as Country[]).find(p => p.short_alpha_code === paisCode);
+        if (paisSeleccionado) {
+            // Filtrar ciudades usando los datos JSON directamente
+            const ciudadesDelPais = (citiesData as City[]).filter(c => c.country_id === paisSeleccionado.id);
+            setCiudadesFiltradas(ciudadesDelPais);
+            console.log(`🏙️ Ciudades encontradas para ${paisCode}:`, ciudadesDelPais.length);
+        } else {
+            setCiudadesFiltradas([]);
+            console.log(`❌ No se encontró país con código: ${paisCode}`);
         }
     };
 
@@ -608,26 +638,14 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
         setFormData(prev => ({
             ...prev,
             pais: paisId,
-            departamento: '', // Reset departamento
             ciudad: '' // Reset ciudad
         }));
+
+        // Cargar ciudades del país seleccionado
+        loadCiudadesPorPais(paisId);
 
         // Limpiar errores relacionados
         if (errors.pais) setErrors(prev => ({ ...prev, pais: "" }));
-        if (errors.departamento) setErrors(prev => ({ ...prev, departamento: "" }));
-        if (errors.ciudad) setErrors(prev => ({ ...prev, ciudad: "" }));
-    };
-
-    // Función para manejar cambio de departamento
-    const handleDepartamentoChange = (departamentoId: string) => {
-        setFormData(prev => ({
-            ...prev,
-            departamento: departamentoId,
-            ciudad: '' // Reset ciudad
-        }));
-
-        // Limpiar errores relacionados
-        if (errors.departamento) setErrors(prev => ({ ...prev, departamento: "" }));
         if (errors.ciudad) setErrors(prev => ({ ...prev, ciudad: "" }));
     };
 
@@ -704,9 +722,16 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
         }));
     };
 
+    // � FUNCIONES DE ACCIONISTAS RESTAURADAS
     const addAccionista = () => {
         const newAccionista: Accionista = {
+            empresaPadre: "MATRIZ",
             nombre: "",
+            identificacion: "",
+            tipo: "",
+            porcentaje: 0,
+            subAccionistas: [],
+            // Campos legacy para compatibilidad
             tipoIdentificacion: "",
             numeroIdentificacion: "",
             porcentajeParticipacion: 0
@@ -720,9 +745,17 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
     const updateAccionista = (index: number, field: keyof Accionista, value: string | number) => {
         setFormData(prev => ({
             ...prev,
-            accionistas: prev.accionistas.map((acc, i) =>
-                i === index ? { ...acc, [field]: value } : acc
-            )
+            accionistas: prev.accionistas.map((acc, i) => {
+                if (i === index) {
+                    const updated = { ...acc, [field]: value };
+                    // Sincronizar campos legacy
+                    if (field === 'tipo') updated.tipoIdentificacion = value as string;
+                    if (field === 'identificacion') updated.numeroIdentificacion = value as string;
+                    if (field === 'porcentaje') updated.porcentajeParticipacion = value as number;
+                    return updated;
+                }
+                return acc;
+            })
         }));
     };
 
@@ -730,6 +763,39 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
         setFormData(prev => ({
             ...prev,
             accionistas: prev.accionistas.filter((_, i) => i !== index)
+        }));
+    };
+
+    // Función para actualizar sub-accionistas desde Excel
+    const updateSubAccionistas = (accionistaIndex: number, subAccionistas: Accionista[]) => {
+        setFormData(prev => ({
+            ...prev,
+            accionistas: prev.accionistas.map((acc, i) => 
+                i === accionistaIndex ? { ...acc, subAccionistas } : acc
+            )
+        }));
+    };
+
+    // 🔄 FUNCIÓN DE MAPEO - Convierte accionistas nuevos al formato legacy
+    const mapAccionistasToLegacy = (accionistas: Accionista[]): { nombre: string; tipoIdentificacion: string; numeroIdentificacion: string; porcentajeParticipacion: number; }[] => {
+        const flattenAccionistas = (accionistas: Accionista[]): Accionista[] => {
+            const result: Accionista[] = [];
+            accionistas.forEach(accionista => {
+                result.push(accionista);
+                if (accionista.subAccionistas && accionista.subAccionistas.length > 0) {
+                    result.push(...flattenAccionistas(accionista.subAccionistas));
+                }
+            });
+            return result;
+        };
+
+        const todosLosAccionistas = flattenAccionistas(accionistas);
+        
+        return todosLosAccionistas.map(accionista => ({
+            nombre: accionista.nombre,
+            tipoIdentificacion: accionista.tipo || accionista.tipoIdentificacion || "",
+            numeroIdentificacion: accionista.identificacion || accionista.numeroIdentificacion || "",
+            porcentajeParticipacion: accionista.porcentaje || accionista.porcentajeParticipacion || 0
         }));
     };
 
@@ -750,9 +816,9 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 if (!formData.tipoDocumento) newErrors.tipoDocumento = "Selecciona el tipo de documento";
                 if (!formData.numeroDocumento) newErrors.numeroDocumento = "Ingresa el número de documento";
 
-                // Validar dígito de verificación para NIT y RUT
-                if ((formData.tipoDocumento === "NIT" || formData.tipoDocumento === "RUT") && !formData.digitoVerificacion) {
-                    newErrors.digitoVerificacion = "El dígito de verificación es requerido";
+                // Validar dígito de verificación para NIT solamente (ya no validamos RUT)
+                if (formData.tipoDocumento === "NIT" && !formData.digitoVerificacion) {
+                    newErrors.digitoVerificacion = "El dígito de verificación es requerido para NIT";
                 }
                 if (formData.tipoPersona === "natural") {
                     if (!formData.nombres) newErrors.nombres = "Ingresa los nombres";
@@ -790,7 +856,6 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 }
                 if (!formData.direccion) newErrors.direccion = "Ingresa la dirección";
                 if (!formData.ciudad) newErrors.ciudad = "Ingresa la ciudad";
-                if (!formData.departamento) newErrors.departamento = "Ingresa el departamento";
                 if (!formData.telefono) newErrors.telefono = "Ingresa el teléfono";
                 if (!formData.correoElectronico) newErrors.correoElectronico = "Ingresa el correo electrónico";
                 if (formData.correoElectronico) {
@@ -800,6 +865,11 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                         newErrors.correoElectronico = "Ingresa un correo válido (ejemplo: usuario@dominio.com)";
                     }
                 }
+                
+                // Validaciones de campos de contacto obligatorios
+                if (!formData.nombrePersonaContacto) newErrors.nombrePersonaContacto = "Ingresa el nombre de la persona de contacto";
+                if (!formData.cargoPersonaContacto) newErrors.cargoPersonaContacto = "Ingresa el cargo de la persona de contacto";
+                
                 break;
             case 2: // Representantes
                 // Validación mínima para representantes según tipo de persona
@@ -922,6 +992,11 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 if (!formData.autorizacionTratamientoDatos) {
                     newErrors.autorizacionTratamientoDatos = "Debe autorizar el tratamiento de datos personales";
                 }
+
+                // Validar firma del representante legal
+                if (!formData.documentos.firma) {
+                    newErrors.firma = "La firma del representante legal es requerida";
+                }
                 break;
         }
 
@@ -1004,7 +1079,6 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
             'actividad_economica_principal': 'Actividad económica',
             'codigo_ciiu': 'Código CIIU',
             'ciudad': 'Ciudad',
-            'departamento': 'Departamento',
             'persona_expuesta_politica': 'Declaración PEP',
             'fuentes_fondos': 'Fuentes de fondos',
             'tipos_recursos': 'Tipos de recursos',
@@ -1081,7 +1155,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 formData.append('tipoPersona', formularioCompleto.tipoPersona);
                 formData.append('tipoDocumento', formularioCompleto.tipoDocumento);
                 formData.append('numeroDocumento', formularioCompleto.numeroDocumento);
-                
+
                 // 🔧 Para personas jurídicas, usar nombreRazonSocial como nombres
                 if (formularioCompleto.tipoPersona === 'juridica') {
                     formData.append('nombres', formularioCompleto.nombreRazonSocial || '');
@@ -1090,12 +1164,12 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                     formData.append('nombres', formularioCompleto.nombres || '');
                     formData.append('apellidos', formularioCompleto.apellidos || '');
                 }
-                
+
                 formData.append('email', formularioCompleto.correoElectronico || '');
                 formData.append('telefono', formularioCompleto.telefono || '');
                 formData.append('direccion', formularioCompleto.direccion || '');
                 formData.append('ciudad', formularioCompleto.ciudad || '');
-                formData.append('departamento', formularioCompleto.departamento || '');
+                formData.append('departamento', ''); // Ya no se usa departamento
                 formData.append('pais', formularioCompleto.pais || 'CO');
                 formData.append('actividad_economica', formularioCompleto.actividadEconomica || '');
                 formData.append('codigo_ciiu', formularioCompleto.codigoCIIU || '');
@@ -1124,6 +1198,22 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 }
                 if (formularioCompleto.correoFacturacion) {
                     formData.append('correo_facturacion', formularioCompleto.correoFacturacion);
+                }
+
+                // 👤 CAMPOS DE CONTACTO
+                if (formularioCompleto.nombrePersonaContacto) {
+                    formData.append('nombre_persona_contacto', formularioCompleto.nombrePersonaContacto);
+                }
+                if (formularioCompleto.cargoPersonaContacto) {
+                    formData.append('cargo_persona_contacto', formularioCompleto.cargoPersonaContacto);
+                }
+
+                // 💰 ACTIVOS VIRTUALES
+                if (formularioCompleto.manejoActivosVirtuales !== undefined) {
+                    formData.append('manejo_activos_virtuales', String(formularioCompleto.manejoActivosVirtuales));
+                }
+                if (formularioCompleto.detalleActivosVirtuales) {
+                    formData.append('detalle_activos_virtuales', formularioCompleto.detalleActivosVirtuales);
                 }
 
                 // 📋 REPRESENTANTES (para personas jurídicas)
@@ -1298,7 +1388,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 if (formData.accionistas && formData.accionistas.length > 0) {
                     const totalPorcentaje = formData.accionistas.reduce((sum: number, acc: any) => sum + acc.porcentajeParticipacion, 0);
                     console.log(`🔍 Validando porcentajes: ${totalPorcentaje.toFixed(2)}%`);
-                    
+
                     // Verificar porcentajes individuales
                     for (const accionista of formData.accionistas) {
                         if (accionista.porcentajeParticipacion > 100) {
@@ -1312,35 +1402,35 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                             return;
                         }
                     }
-                    
+
                     // Verificar suma total
                     if (totalPorcentaje > 100) {
                         alert(`❌ Error: La suma total de porcentajes de participación (${totalPorcentaje.toFixed(2)}%) no puede exceder 100%. Por favor, ajuste los valores.`);
                         setIsSubmitting(false);
                         return;
                     }
-                    
+
                     console.log(`✅ Validación de porcentajes OK: ${totalPorcentaje.toFixed(2)}%`);
                 }
 
-                // Convertir IDs de ubicación a nombres
-                const departamentoNombre = formData.departamento ?
-                    ubicacionesService.getDepartamentoNameById(formData.departamento) || formData.departamento
-                    : formData.departamento;
-
+                // Convertir IDs de ubicación a nombres usando JSON
                 const ciudadNombre = formData.ciudad ?
-                    ubicacionesService.getCiudadNameById(formData.ciudad) || formData.ciudad
-                    : formData.ciudad;
+                    getCiudadNameById(formData.ciudad)
+                    : '';
+
+                const paisNombre = formData.pais ?
+                    getPaisNameById(formData.pais)
+                    : 'Colombia';
 
                 console.log('📍 Ubicaciones convertidas:', {
-                    departamento: `${formData.departamento} → ${departamentoNombre}`,
-                    ciudad: `${formData.ciudad} → ${ciudadNombre}`
+                    ciudad: `${formData.ciudad} → ${ciudadNombre}`,
+                    pais: `${formData.pais} → ${paisNombre}`
                 });
 
                 // Mapear los datos del formulario al formato requerido por la API según la guía del backend
                 const terceroData: TerceroCreateRequest = {
                     // 🆔 IDENTIFICACIÓN BÁSICA
-                    tipo_documento: formData.tipoDocumento as 'CC' | 'CE' | 'PA' | 'NIT',
+                    tipo_documento: formData.tipoDocumento as 'CC' | 'CE' | 'PA' | 'NIT' | 'OTRO',
                     numero_documento: formData.numeroDocumento,
                     digito_verificacion: formData.digitoVerificacion || undefined,
                     tipo_persona: formData.tipoPersona as 'natural' | 'juridica' | 'publica',
@@ -1352,11 +1442,15 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                     // 📍 INFORMACIÓN DE CONTACTO
                     direccion: formData.direccion,
                     ciudad: ciudadNombre,
-                    departamento: departamentoNombre,
-                    pais: formData.pais || 'CO',
+                    departamento: '', // Ya no se usa departamento
+                    pais: paisNombre,
                     telefono: formData.telefono,
                     celular: formData.celular || undefined,
                     email: formData.correoElectronico.replace(/\s+/g, ''),
+
+                    // 👤 INFORMACIÓN DE CONTACTO ADICIONAL
+                    nombrePersonaContacto: formData.nombrePersonaContacto || undefined,
+                    cargoPersonaContacto: formData.cargoPersonaContacto || undefined,
 
                     // 🏢 ACTIVIDAD ECONÓMICA
                     actividad_economica_principal: formData.actividadEconomica,
@@ -1387,6 +1481,8 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                     // 🌍 OPERACIONES COMERCIALES
                     operacionesMonedaExtranjera: formData.operacionesMonedaExtranjera,
                     tiposOperacionesMonedaExtranjera: formData.tiposOperacionesMonedaExtranjera,
+                    manejoActivosVirtuales: formData.manejoActivosVirtuales,
+                    detalleActivosVirtuales: formData.detalleActivosVirtuales || undefined,
                     observaciones: formData.observaciones || undefined,
 
                     // 🛡️ DECLARACIONES SARLAFT/PEP
@@ -1417,7 +1513,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
 
                     // 👥 REPRESENTANTES Y ACCIONISTAS
                     representantes: formData.representantes,
-                    accionistas_frontend: formData.accionistas,
+                    accionistas_frontend: mapAccionistasToLegacy(formData.accionistas),
 
                     // 📋 METADATA Y FLUJO
                     tipo_formulario: formData.tipoFormulario,
@@ -1430,8 +1526,8 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 // Actualizar formData con ubicaciones convertidas
                 const formDataActualizado = {
                     ...formData,
-                    departamento: departamentoNombre,
-                    ciudad: ciudadNombre
+                    ciudad: ciudadNombre,
+                    pais: paisNombre
                 };
 
                 console.log('📤 Datos actualizados que se enviarán al backend:', formDataActualizado);
@@ -1451,7 +1547,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
 
                 // Extraer el ID desde response.data.id (estructura del backend)
                 const terceroId = response.data?.id || response.id || response.tercero_id;
-                
+
                 if (!terceroId) {
                     console.error('❌ Response no tiene ID en ninguna propiedad:', response);
                     throw new Error(`La respuesta del servidor no tiene ID. Estructura: ${JSON.stringify(response)}`);
@@ -1514,7 +1610,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 else if (error.response?.status === 500) {
                     errorTitle = "🔧 Error del Servidor";
                     errorMessage = "El servidor está experimentando problemas técnicos. Por favor contacta al administrador del sistema o intenta nuevamente en unos minutos.";
-                    
+
                     // Log adicional para debugging del error 500
                     console.error('🚨 ERROR 500 - Detalles del servidor:', {
                         url: error.config?.url,
@@ -1564,12 +1660,18 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
     };
 
     // Función auxiliar para mapear tipos de documento
-    const mapDocumentType = (tipo: string): 'CC' | 'CE' | 'PA' | 'NIT' => {
+    const mapDocumentType = (tipo: string): 'CC' | 'CE' | 'PA' | 'NIT' | 'OTRO' => {
         switch (tipo) {
+            case 'CC': return 'CC';
+            case 'CE': return 'CE';
+            case 'PA': return 'PA';
+            case 'NIT': return 'NIT';
+            case 'OTRO': return 'OTRO';
             case 'cedula': return 'CC';
             case 'cedula_extranjeria': return 'CE';
             case 'pasaporte': return 'PA';
             case 'nit': return 'NIT';
+            case 'otro': return 'OTRO';
             default: return 'CC'; // Por defecto cédula
         }
     };
@@ -1713,20 +1815,18 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                                             <option value="" disabled>Selecciona el tipo</option>
                                             <option value="CC">Cédula de Ciudadanía</option>
                                             <option value="CE">Cédula de Extranjería</option>
-                                            <option value="PP">Pasaporte</option>
+                                            <option value="PA">Pasaporte</option>
+                                            <option value="OTRO">Otro/Exterior</option>
                                         </>
                                     ) : formData.tipoPersona === "juridica" ? (
                                         <>
                                             <option value="" disabled>Selecciona el tipo</option>
-                                            <option value="NIT">NIT</option>
-                                            <option value="RUT">RUT</option>
+                                            <option value="NIT">NIT (Número de Identificación Tributaria)</option>
                                         </>
                                     ) : formData.tipoPersona === "publica" ? (
                                         <>
                                             <option value="" disabled>Selecciona el tipo</option>
-                                            <option value="NIT">NIT</option>
-                                            <option value="RUT">RUT</option>
-                                            <option value="CODIGO_ENTIDAD">Código de Entidad</option>
+                                            <option value="NIT">NIT (Número de Identificación Tributaria)</option>
                                         </>
                                     ) : (
                                         <option value="" disabled>Selecciona tipo de persona primero</option>
@@ -1909,6 +2009,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                                 Información de Contacto
                             </h3>
 
+                            {/* Dirección */}
                             <div className="space-y-2">
                                 <Label htmlFor="direccion" className="text-[#0033A0] font-semibold flex items-center gap-2">
                                     <MapPin className="h-4 w-4 text-[#FFD700]" />
@@ -1918,7 +2019,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                                     id="direccion"
                                     value={formData.direccion}
                                     onChange={(e) => handleInputChange("direccion", e.target.value)}
-                                    placeholder="Dirección completa"
+                                    placeholder="Ejemplo: Calle 123 # 45-67, Barrio Centro, Edificio XYZ, Apartamento 102"
                                     className={`min-h-[80px] transition-all duration-200 ${errors.direccion ? 'border-red-500' : 'border-border focus:border-[#FFD700]'}`}
                                 />
                                 {errors.direccion && (
@@ -1929,94 +2030,79 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                                 )}
                             </div>
 
-                            <div className="grid md:grid-cols-3 gap-6">
-                                <div className="space-y-2">
-                                    <Label htmlFor="pais" className="text-[#0033A0] font-semibold flex items-center gap-2">
-                                        <Globe className="h-4 w-4 text-[#FFD700]" />
-                                        País *
-                                    </Label>
-                                    <select
-                                        value={formData.pais}
-                                        onChange={(e) => handlePaisChange(e.target.value)}
-                                        className={`radix-like h-12 transition-all duration-200 ${errors.pais ? 'border-red-500 focus:border-red-500' : 'border-border focus:border-[#FFD700]'
-                                            }`}
-                                    >
-                                        <option value="" disabled>Selecciona un país</option>
-                                        {paises.map((pais) => (
-                                            <option key={pais.id} value={pais.id}>
-                                                {pais.nombre}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {errors.pais && (
-                                        <p className="text-sm text-red-600 flex items-center gap-1 mt-1">
-                                            <AlertCircle className="h-3 w-3" />
-                                            {errors.pais}
-                                        </p>
-                                    )}
+                            {/* Ubicación Geográfica */}
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Globe className="h-5 w-5 text-[#0033A0]" />
+                                    <h4 className="text-[#0033A0] font-semibold">Ubicación Geográfica</h4>
                                 </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* País */}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="pais" className="text-[#0033A0] font-semibold flex items-center gap-2">
+                                            <Globe className="h-4 w-4 text-[#FFD700]" />
+                                            País *
+                                        </Label>
+                                        <select
+                                            value={formData.pais}
+                                            onChange={(e) => handlePaisChange(e.target.value)}
+                                            className={`radix-like h-12 transition-all duration-200 ${errors.pais ? 'border-red-500 focus:border-red-500' : 'border-border focus:border-[#FFD700]'
+                                                }`}
+                                        >
+                                            <option value="" disabled>Selecciona un país</option>
+                                            {paises.map((pais) => (
+                                                <option key={pais.id} value={pais.short_alpha_code}>
+                                                    {pais.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {errors.pais && (
+                                            <p className="text-sm text-red-600 flex items-center gap-1 mt-1">
+                                                <AlertCircle className="h-3 w-3" />
+                                                {errors.pais}
+                                            </p>
+                                        )}
+                                    </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="departamento" className="text-[#0033A0] font-semibold flex items-center gap-2">
-                                        <MapPin className="h-4 w-4 text-[#FFD700]" />
-                                        Departamento/Estado *
-                                    </Label>
-                                    <select
-                                        value={formData.departamento}
-                                        onChange={(e) => handleDepartamentoChange(e.target.value)}
-                                        disabled={!formData.pais || formData.pais === 'OTHER' || loadingDepartamentos}
-                                        className={`radix-like h-12 transition-all duration-200 ${errors.departamento ? 'border-red-500 focus:border-red-500' : 'border-border focus:border-[#FFD700]'
-                                            } ${(!formData.pais || formData.pais === 'OTHER' || loadingDepartamentos) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        <option value="" disabled>
-                                            {loadingDepartamentos ? "Cargando..." :
-                                                !formData.pais ? "Selecciona primero un país" :
-                                                    formData.pais === 'OTHER' ? "No disponible para otros países" :
-                                                        "Selecciona un departamento"}
-                                        </option>
-                                        {departamentos.map((dept) => (
-                                            <option key={dept.id} value={dept.id}>
-                                                {dept.nombre}
+                                    {/* Ciudad */}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="ciudad" className="text-[#0033A0] font-semibold flex items-center gap-2">
+                                            <Building2 className="h-4 w-4 text-[#FFD700]" />
+                                            Ciudad *
+                                        </Label>
+                                        <select
+                                            value={formData.ciudad}
+                                            onChange={(e) => handleCiudadChange(e.target.value)}
+                                            disabled={!formData.pais || formData.pais === 'OTHER' || loadingCiudades}
+                                            className={`radix-like h-12 transition-all duration-200 ${errors.ciudad ? 'border-red-500 focus:border-red-500' : 'border-border focus:border-[#FFD700]'
+                                                } ${(!formData.pais || formData.pais === 'OTHER' || loadingCiudades) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            <option value="" disabled>
+                                                {loadingCiudades ? "Cargando ciudades..." :
+                                                    !formData.pais ? "Selecciona primero un país" :
+                                                        formData.pais === 'OTHER' ? "No disponible para otros países" :
+                                                            ciudadesFiltradas.length === 0 ? "No hay ciudades disponibles" :
+                                                                "Selecciona una ciudad"}
                                             </option>
-                                        ))}
-                                    </select>
-                                    {errors.departamento && (
-                                        <p className="text-sm text-red-600 flex items-center gap-1 mt-1">
-                                            <AlertCircle className="h-3 w-3" />
-                                            {errors.departamento}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="ciudad" className="text-[#0033A0] font-semibold flex items-center gap-2">
-                                        <Building2 className="h-4 w-4 text-[#FFD700]" />
-                                        Ciudad *
-                                    </Label>
-                                    <select
-                                        value={formData.ciudad}
-                                        onChange={(e) => handleCiudadChange(e.target.value)}
-                                        disabled={!formData.departamento || loadingCiudades}
-                                        className={`radix-like h-12 transition-all duration-200 ${errors.ciudad ? 'border-red-500 focus:border-red-500' : 'border-border focus:border-[#FFD700]'
-                                            } ${(!formData.departamento || loadingCiudades) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        <option value="" disabled>
-                                            {loadingCiudades ? "Cargando..." :
-                                                !formData.departamento ? "Selecciona primero un departamento" :
-                                                    "Selecciona una ciudad"}
-                                        </option>
-                                        {ciudades.map((ciudad) => (
-                                            <option key={ciudad.id} value={ciudad.id}>
-                                                {ciudad.nombre}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {errors.ciudad && (
-                                        <p className="text-sm text-red-600 flex items-center gap-1 mt-1">
-                                            <AlertCircle className="h-3 w-3" />
-                                            {errors.ciudad}
-                                        </p>
-                                    )}
+                                            {ciudadesFiltradas.map((ciudad) => (
+                                                <option key={ciudad.id} value={ciudad.id}>
+                                                    {ciudad.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {errors.ciudad && (
+                                            <p className="text-sm text-red-600 flex items-center gap-1 mt-1">
+                                                <AlertCircle className="h-3 w-3" />
+                                                {errors.ciudad}
+                                            </p>
+                                        )}
+                                        {formData.pais && ciudadesFiltradas.length > 0 && (
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                {ciudadesFiltradas.length} ciudades disponibles
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -2026,16 +2112,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                                     <MapPin className="h-4 w-4 text-amber-600" />
                                     <AlertDescription className="text-amber-800">
                                         <strong>País personalizado:</strong> Por favor, escriba manualmente la información de ubicación.
-                                        <div className="grid md:grid-cols-2 gap-4 mt-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-amber-800 font-semibold">Departamento/Estado</Label>
-                                                <Input
-                                                    value={formData.departamento}
-                                                    onChange={(e) => setFormData(prev => ({ ...prev, departamento: e.target.value }))}
-                                                    placeholder="Escriba el departamento/estado"
-                                                    className="border-amber-300 focus:border-amber-500"
-                                                />
-                                            </div>
+                                        <div className="grid md:grid-cols-1 gap-4 mt-4">
                                             <div className="space-y-2">
                                                 <Label className="text-amber-800 font-semibold">Ciudad</Label>
                                                 <Input
@@ -2067,6 +2144,46 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                                         <p className="text-sm text-red-600 flex items-center gap-1 mt-1">
                                             <AlertCircle className="h-3 w-3" />
                                             {errors.telefono}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="cargoContacto" className="text-[#0033A0] font-semibold flex items-center gap-2">
+                                        Cargo de la persona de contacto *
+                                    </Label>
+                                    <Input
+                                        id="cargoContacto"
+                                        value={formData.cargoPersonaContacto || ""}
+                                        onChange={(e) => handleInputChange("cargoPersonaContacto", e.target.value)}
+                                        placeholder="Cargo de la persona de contacto"
+                                        required
+                                        className={`h-12 transition-all duration-200 ${errors.cargoPersonaContacto ? 'border-red-500' : 'border-border focus:border-[#FFD700]'}`}
+                                    />
+                                    {errors.cargoPersonaContacto && (
+                                        <p className="text-sm text-red-600 flex items-center gap-1 mt-1">
+                                            <AlertCircle className="h-3 w-3" />
+                                            {errors.cargoPersonaContacto}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="nombreContacto" className="text-[#0033A0] font-semibold flex items-center gap-2">
+                                        Nombre de la persona de contacto *
+                                    </Label>
+                                    <Input
+                                        id="nombreContacto"
+                                        value={formData.nombrePersonaContacto || ""}
+                                        onChange={(e) => handleInputChange("nombrePersonaContacto", e.target.value)}
+                                        placeholder="Nombre de la persona de contacto"
+                                        required
+                                        className={`h-12 transition-all duration-200 ${errors.nombrePersonaContacto ? 'border-red-500' : 'border-border focus:border-[#FFD700]'}`}
+                                    />
+                                    {errors.nombrePersonaContacto && (
+                                        <p className="text-sm text-red-600 flex items-center gap-1 mt-1">
+                                            <AlertCircle className="h-3 w-3" />
+                                            {errors.nombrePersonaContacto}
                                         </p>
                                     )}
                                 </div>
@@ -2336,13 +2453,15 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                                                         <div className="space-y-2">
                                                             <Label className="text-[#0033A0] font-semibold">Tipo de Identificación *</Label>
                                                             <select
-                                                                value={accionista.tipoIdentificacion}
-                                                                onChange={(e) => updateAccionista(index, "tipoIdentificacion", e.target.value)}
+                                                                value={accionista.tipo}
+                                                                onChange={(e) => updateAccionista(index, "tipo", e.target.value)}
                                                                 className="radix-like h-10 border-border focus:border-[#FFD700]"
                                                             >
+                                                                <option value="" disabled>Tipo de ID</option>
                                                                 <option value="CC">Cédula de Ciudadanía</option>
                                                                 <option value="CE">Cédula de Extranjería</option>
                                                                 <option value="NIT">NIT</option>
+                                                                <option value="OTRO">Otro/Exterior</option>
                                                             </select>
                                                         </div>
                                                     </div>
@@ -2350,8 +2469,8 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                                                         <div className="space-y-2">
                                                             <Label className="text-[#0033A0] font-semibold">Número de Identificación *</Label>
                                                             <Input
-                                                                value={accionista.numeroIdentificacion}
-                                                                onChange={(e) => updateAccionista(index, "numeroIdentificacion", e.target.value)}
+                                                                value={accionista.identificacion}
+                                                                onChange={(e) => updateAccionista(index, "identificacion", e.target.value)}
                                                                 placeholder="Número de identificación"
                                                                 className="h-10 border-border focus:border-[#FFD700]"
                                                             />
@@ -2363,12 +2482,11 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                                                                 min="0.01"
                                                                 max="100"
                                                                 step="0.01"
-                                                                value={accionista.porcentajeParticipacion}
+                                                                value={accionista.porcentaje}
                                                                 onChange={(e) => {
                                                                     const value = parseFloat(e.target.value) || 0;
-                                                                    // ✅ Validar que no exceda 100%
                                                                     if (value <= 100) {
-                                                                        updateAccionista(index, "porcentajeParticipacion", value);
+                                                                        updateAccionista(index, "porcentaje", value);
                                                                     }
                                                                 }}
                                                                 placeholder="5.00"
@@ -2376,36 +2494,47 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                                                             />
                                                         </div>
                                                     </div>
+
+                                                    {/* Sub-accionistas para empresas (NIT) */}
+                                                    {accionista.tipo === "NIT" && (
+                                                        <SubAccionistasExcel
+                                                            accionistaId={accionista.identificacion}
+                                                            accionistaNombre={accionista.nombre}
+                                                            subAccionistas={accionista.subAccionistas}
+                                                            onSubAccionistasChange={(subAccionistas) => 
+                                                                updateSubAccionistas(index, subAccionistas)
+                                                            }
+                                                        />
+                                                    )}
                                                 </CardContent>
                                             </Card>
                                         ))}
 
                                         {/* Validación de porcentajes */}
                                         {formData.accionistas.length > 0 && (
-                                            <Card className={`border-2 ${
-                                                formData.accionistas.reduce((sum: number, acc: any) => sum + acc.porcentajeParticipacion, 0) <= 100
+                                            <Card className={`border-2 ${formData.accionistas.reduce((sum: number, acc: any) => sum + acc.porcentaje, 0) <= 100
                                                     ? "bg-green-50 border-green-200"
                                                     : "bg-red-50 border-red-300"
-                                            }`}>
+                                                }`}>
                                                 <CardContent className="p-4">
                                                     <div className="flex items-center justify-between mb-2">
                                                         <span className="text-sm font-medium text-gray-700">
                                                             Participación total registrada:
                                                         </span>
                                                         <Badge variant={
-                                                            formData.accionistas.reduce((sum: number, acc: any) => sum + acc.porcentajeParticipacion, 0) <= 100
+                                                            formData.accionistas.reduce((sum: number, acc: any) => sum + acc.porcentaje, 0) <= 100
                                                                 ? "secondary"
                                                                 : "destructive"
                                                         }>
-                                                            {formData.accionistas.reduce((sum: number, acc: any) => sum + acc.porcentajeParticipacion, 0).toFixed(2)}%
+                                                            {formData.accionistas.reduce((sum: number, acc: any) => sum + acc.porcentaje, 0).toFixed(2)}%
                                                         </Badge>
                                                     </div>
-                                                    {formData.accionistas.reduce((sum: number, acc: any) => sum + acc.porcentajeParticipacion, 0) > 100 && (
+                                                    {formData.accionistas.reduce((sum: number, acc: any) => sum + acc.porcentaje, 0) > 100 && (
                                                         <div className="text-xs text-red-600 bg-red-100 p-2 rounded mt-2">
                                                             ⚠️ La suma de porcentajes no puede exceder 100%. Por favor, ajuste los valores.
                                                         </div>
                                                     )}
-                                                    {formData.accionistas.reduce((sum: number, acc: any) => sum + acc.porcentajeParticipacion, 0) === 100 && (
+                                                    {formData.accionistas.reduce((sum: number, acc: any) => sum + acc.porcentaje, 0) === 100 && (
                                                         <div className="text-xs text-green-600 bg-green-100 p-2 rounded mt-2">
                                                             ✅ Participación total válida (100%)
                                                         </div>
@@ -3007,6 +3136,56 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                                                     </label>
                                                 ))}
                                             </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border border-gray-200">
+                            <CardHeader className="bg-gradient-to-r from-[#0033A0]/5 to-[#FFD700]/5">
+                                <CardTitle className="text-lg text-[#0033A0] flex items-center gap-2">
+                                    <Globe className="h-5 w-5 text-[#FFD700]" />
+                                    Manejo de activos virtuales
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-6">
+                                <div className="space-y-4">
+                                    <Label className="text-[#0033A0] font-semibold">
+                                        ¿Realiza transacciones con activos virtuales (Criptomonedas, NFT, otros)?
+                                    </Label>
+
+                                    <select
+                                        value={formData.manejoActivosVirtuales ? "si" : "no"}
+                                        onChange={(e) => {
+                                            const realiza = e.target.value === "si";
+                                            handleInputChange("manejoActivosVirtuales", realiza);
+                                            if (!realiza) {
+                                                setFormData((prev) => ({
+                                                    ...prev,
+                                                    detalleActivosVirtuales: "",
+                                                }));
+                                            }
+                                        }}
+                                        className="radix-like h-12 border-border focus:border-[#FFD700]"
+                                    >
+                                        <option value="" disabled>Selecciona una opción</option>
+                                        <option value="si">Sí</option>
+                                        <option value="no">No</option>
+                                    </select>
+
+                                    {/* Detalle en caso afirmativo */}
+                                    {formData.manejoActivosVirtuales && (
+                                        <div className="mt-4 space-y-4">
+                                            <Label className="text-[#0033A0] font-semibold">
+                                                En caso afirmativo, especifique:
+                                            </Label>
+                                            <Textarea
+                                                value={formData.detalleActivosVirtuales || ""}
+                                                onChange={(e) => handleInputChange("detalleActivosVirtuales", e.target.value)}
+                                                placeholder="Especifique los tipos de activos virtuales que maneja (Ej: Bitcoin, Ethereum, NFTs, tokens específicos, etc.)"
+                                                className="min-h-[100px] border-border focus:border-[#FFD700]"
+                                            />
                                         </div>
                                     )}
                                 </div>
@@ -4093,7 +4272,137 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                                             </label>
                                         </div>
 
-                                        {errors.autorizacionTratamientoDatos && (
+                                        <div>
+                                            {/* Firma del Representante Legal */}
+                                            <div className="mt-6">
+                                                <h3 className="text-lg font-semibold text-[#0033A0] mb-4 flex items-center gap-3">
+                                                    <FileCheck className="h-5 w-5 text-purple-600" />
+                                                    Firma del Representante Legal
+                                                </h3>
+                                                
+                                                <Card className={`border transition-all duration-200 ${errors.firma ? 'border-red-500' :
+                                                    formData.documentos.firma ? 'border-green-300 bg-green-50' : 'border-gray-200'
+                                                    }`}>
+                                                    <CardContent className="p-6">
+                                                        <div className="flex items-start gap-4">
+                                                            <div className={`p-3 rounded-lg ${formData.documentos.firma ? 'bg-green-100' : 'bg-[#0033A0]/10'}`}>
+                                                                {formData.documentos.firma ? (
+                                                                    <CheckCircle className="h-6 w-6 text-green-600" />
+                                                                ) : (
+                                                                    <FileCheck className="h-6 w-6 text-[#0033A0]" />
+                                                                )}
+                                                            </div>
+
+                                                            <div className="flex-1 space-y-3">
+                                                                <div>
+                                                                    <h4 className="font-semibold text-[#0033A0] flex items-center gap-2">
+                                                                        Firma del representante legal
+                                                                        <Badge variant="destructive" className="text-xs">
+                                                                            Obligatorio
+                                                                        </Badge>
+                                                                    </h4>
+                                                                    {formData.documentos.firma && (
+                                                                        <div className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded mt-2">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <CheckCircle className="h-3 w-3 text-green-600" />
+                                                                                <span className="text-sm text-green-600 font-medium">{(formData.documentos.firma as File).name}</span>
+                                                                                <span className="text-xs text-gray-500">
+                                                                                    ({((formData.documentos.firma as File).size / 1024 / 1024).toFixed(2)} MB)
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="flex gap-1">
+                                                                                <Button
+                                                                                    type="button"
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    onClick={() => {
+                                                                                        const url = URL.createObjectURL(formData.documentos.firma as File);
+                                                                                        window.open(url, '_blank');
+                                                                                    }}
+                                                                                    className="text-blue-500 hover:text-blue-700 h-6 w-6 p-0"
+                                                                                    title="Ver archivo"
+                                                                                >
+                                                                                    <Eye className="h-3 w-3" />
+                                                                                </Button>
+                                                                                <Button
+                                                                                    type="button"
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    onClick={() => handleFileUpload('firma', null)}
+                                                                                    className="text-red-500 hover:text-red-700 h-6 w-6 p-0"
+                                                                                    title="Eliminar archivo"
+                                                                                >
+                                                                                    <X className="h-3 w-3" />
+                                                                                </Button>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                                {!formData.documentos.firma && (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        onClick={() => {
+                                                                            const input = document.createElement('input');
+                                                                            input.type = 'file';
+                                                                            input.accept = '.pdf,.jpg,.jpeg,.png,.doc,.docx';
+                                                                            input.multiple = false;
+
+                                                                            input.onchange = (e) => {
+                                                                                const files = Array.from((e.target as HTMLInputElement).files || []);
+                                                                                if (files.length === 0) return;
+
+                                                                                const file = files[0];
+                                                                                if (file.size > 5 * 1024 * 1024) {
+                                                                                    toast({
+                                                                                        title: "Archivo muy grande",
+                                                                                        description: "El archivo debe ser menor a 5MB",
+                                                                                        variant: "destructive"
+                                                                                    });
+                                                                                    return;
+                                                                                }
+
+                                                                                handleFileUpload('firma', file);
+                                                                                toast({
+                                                                                    title: "¡Archivo cargado exitosamente!",
+                                                                                    description: `${file.name} ha sido cargado correctamente`,
+                                                                                    className: "bg-green-500 border-green-500 text-white shadow-lg",
+                                                                                    style: {
+                                                                                        backgroundColor: '#22c55e',
+                                                                                        borderColor: '#22c55e',
+                                                                                        color: 'white'
+                                                                                    }
+                                                                                });
+
+                                                                                // Limpiar error si existe
+                                                                                if (errors.firma) {
+                                                                                    setErrors(prev => ({ ...prev, firma: "" }));
+                                                                                }
+                                                                            };
+                                                                            input.click();
+                                                                        }}
+                                                                        className="w-full border-dashed border-2 h-16 text-[#0033A0] hover:bg-[#0033A0]/5 transition-all duration-200"
+                                                                    >
+                                                                        <Upload className="h-5 w-5 mr-2" />
+                                                                        Cargar firma del representante legal
+                                                                    </Button>
+                                                                )}
+
+                                                                {errors.firma && (
+                                                                    <Alert className="border-red-200 bg-red-50">
+                                                                        <AlertCircle className="h-4 w-4 text-red-600" />
+                                                                        <AlertDescription className="text-red-700">
+                                                                            <strong>Requerido:</strong> {errors.firma}
+                                                                        </AlertDescription>
+                                                                    </Alert>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            </div>
+                                        </div>                                        {errors.autorizacionTratamientoDatos && (
                                             <Alert className="border-red-200 bg-red-50">
                                                 <AlertCircle className="h-4 w-4 text-red-600" />
                                                 <AlertDescription className="text-red-700">
