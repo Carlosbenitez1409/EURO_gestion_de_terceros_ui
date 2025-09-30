@@ -1190,6 +1190,21 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 if (formularioCompleto.personaExpuestaPolitica !== undefined) {
                     formData.append('persona_expuesta_politica', String(formularioCompleto.personaExpuestaPolitica));
                 }
+
+                // 🛡️ CAMPOS SARLAFT ADICIONALES
+                if (formularioCompleto.detallesPEP) {
+                    formData.append('detalle_pep', formularioCompleto.detallesPEP);
+                }
+                if (formularioCompleto.autorizacionTratamientoDatos !== undefined) {
+                    formData.append('autorizacion_tratamiento_datos', String(formularioCompleto.autorizacionTratamientoDatos));
+                }
+                if (formularioCompleto.declaracionTransparencia !== undefined) {
+                    formData.append('declaracion_transparencia', String(formularioCompleto.declaracionTransparencia));
+                }
+                if (formularioCompleto.constituyePatrimoniosAutonomos !== undefined) {
+                    formData.append('constituye_patrimonios_autonomos', String(formularioCompleto.constituyePatrimoniosAutonomos));
+                }
+
                 if (formularioCompleto.digitoVerificacion) {
                     formData.append('digito_verificacion', formularioCompleto.digitoVerificacion);
                 }
@@ -1206,6 +1221,84 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 }
                 if (formularioCompleto.cargoPersonaContacto) {
                     formData.append('cargo_persona_contacto', formularioCompleto.cargoPersonaContacto);
+                }
+
+                // 💰 INFORMACIÓN TRIBUTARIA - CAMPOS FALTANTES
+                if (formularioCompleto.responsableIVA !== undefined) {
+                    formData.append('responsable_iva', String(formularioCompleto.responsableIVA));
+                }
+                if (formularioCompleto.granContribuyente !== undefined) {
+                    formData.append('gran_contribuyente', String(formularioCompleto.granContribuyente));
+                }
+                if (formularioCompleto.numeroResolucionGC) {
+                    formData.append('numero_resolucion_gc', formularioCompleto.numeroResolucionGC);
+                }
+                if (formularioCompleto.fechaResolucionGC) {
+                    formData.append('fecha_resolucion_gc', formularioCompleto.fechaResolucionGC);
+                }
+                if (formularioCompleto.autorretenedor !== undefined) {
+                    formData.append('autorretenedor', String(formularioCompleto.autorretenedor));
+                }
+                if (formularioCompleto.numeroResolucionAutorretenedor) {
+                    formData.append('numero_resolucion_autorretenedor', formularioCompleto.numeroResolucionAutorretenedor);
+                }
+                if (formularioCompleto.fechaResolucionAutorretenedor) {
+                    formData.append('fecha_resolucion_autorretenedor', formularioCompleto.fechaResolucionAutorretenedor);
+                }
+                if (formularioCompleto.exentoRenta !== undefined) {
+                    formData.append('exento_renta', String(formularioCompleto.exentoRenta));
+                }
+                if (formularioCompleto.condicionesExentoRenta) {
+                    formData.append('condiciones_exento_renta', formularioCompleto.condicionesExentoRenta);
+                }
+
+                // 💼 INFORMACIÓN FINANCIERA - CAMPOS FALTANTES
+                if (formularioCompleto.ingresoMensual) {
+                    formData.append('ingreso_mensual', formularioCompleto.ingresoMensual);
+                }
+                if (formularioCompleto.costosGastos) {
+                    formData.append('costos_gastos_mensuales', formularioCompleto.costosGastos);
+                }
+                if (formularioCompleto.otrosIngresos) {
+                    formData.append('otros_ingresos', formularioCompleto.otrosIngresos);
+                }
+                if (formularioCompleto.totalIngresos) {
+                    formData.append('total_ingresos', formularioCompleto.totalIngresos);
+                }
+                if (formularioCompleto.activos) {
+                    formData.append('activos', formularioCompleto.activos);
+                }
+                if (formularioCompleto.pasivos) {
+                    formData.append('pasivos', formularioCompleto.pasivos);
+                }
+                if (formularioCompleto.patrimonio) {
+                    formData.append('patrimonio', formularioCompleto.patrimonio);
+                }
+                if (formularioCompleto.detalleOtrosIngresos) {
+                    formData.append('detalle_otros_ingresos', formularioCompleto.detalleOtrosIngresos);
+                }
+
+                // 🌍 OPERACIONES COMERCIALES - CAMPOS FALTANTES
+                if (formularioCompleto.operacionesMonedaExtranjera !== undefined) {
+                    formData.append('operaciones_moneda_extranjera', String(formularioCompleto.operacionesMonedaExtranjera));
+                }
+                if (formularioCompleto.tiposOperacionesMonedaExtranjera && formularioCompleto.tiposOperacionesMonedaExtranjera.length > 0) {
+                    formData.append('tipos_operaciones_moneda_extranjera', JSON.stringify(formularioCompleto.tiposOperacionesMonedaExtranjera));
+                }
+                if (formularioCompleto.manejoAltoEfectivo !== undefined) {
+                    formData.append('manejo_alto_efectivo', String(formularioCompleto.manejoAltoEfectivo));
+                }
+                if (formularioCompleto.observaciones) {
+                    formData.append('observaciones', formularioCompleto.observaciones);
+                }
+                if (formularioCompleto.origenFondos) {
+                    formData.append('origen_fondos', formularioCompleto.origenFondos);
+                }
+                if (formularioCompleto.fuentesFondos && formularioCompleto.fuentesFondos.length > 0) {
+                    formData.append('fuentes_fondos', JSON.stringify(formularioCompleto.fuentesFondos));
+                }
+                if (formularioCompleto.tiposRecursos && formularioCompleto.tiposRecursos.length > 0) {
+                    formData.append('tipos_recursos', JSON.stringify(formularioCompleto.tiposRecursos));
                 }
 
                 // 💰 ACTIVOS VIRTUALES
@@ -1532,6 +1625,28 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
 
                 console.log('📤 Datos actualizados que se enviarán al backend:', formDataActualizado);
                 console.log('📎 Documentos que se enviarán:', formData.documentos);
+                
+                // 🔍 Log específico para campos tributarios y financieros
+                console.log('💰 Campos tributarios a enviar:', {
+                    responsableIVA: formData.responsableIVA,
+                    granContribuyente: formData.granContribuyente,
+                    autorretenedor: formData.autorretenedor,
+                    exentoRenta: formData.exentoRenta
+                });
+                console.log('💼 Campos financieros a enviar:', {
+                    ingresoMensual: formData.ingresoMensual,
+                    costosGastos: formData.costosGastos,
+                    otrosIngresos: formData.otrosIngresos,
+                    totalIngresos: formData.totalIngresos,
+                    activos: formData.activos,
+                    pasivos: formData.pasivos,
+                    patrimonio: formData.patrimonio
+                });
+                console.log('🌍 Campos comerciales a enviar:', {
+                    operacionesMonedaExtranjera: formData.operacionesMonedaExtranjera,
+                    tiposOperacionesMonedaExtranjera: formData.tiposOperacionesMonedaExtranjera,
+                    observaciones: formData.observaciones
+                });
 
                 // ✅ Usar método actualizado: enviar datos como JSON + documentos por separado
                 const response = await enviarFormularioCompleto(formDataActualizado, formData.documentos);

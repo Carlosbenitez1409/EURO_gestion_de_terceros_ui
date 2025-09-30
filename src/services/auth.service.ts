@@ -41,16 +41,11 @@ class AuthService {
 
   /**
    * Cerrar sesión
+   * Como no hay endpoint de logout en el backend, simplemente limpiamos los tokens localmente
    */
   async logout(): Promise<void> {
-    try {
-      await apiRequest.post('/auth/logout/');
-    } catch (error) {
-      console.warn('Error during logout:', error);
-    } finally {
-      // Limpiar tokens siempre, incluso si hay error en el servidor
-      TokenStorage.clearTokens();
-    }
+    // Limpiar tokens localmente
+    TokenStorage.clearTokens();
   }
 
   /**

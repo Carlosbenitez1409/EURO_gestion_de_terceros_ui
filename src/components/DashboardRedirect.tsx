@@ -21,6 +21,11 @@ export function DashboardRedirect() {
         return <Navigate to="/login" replace />;
     }
 
+    // Gestión Humana va directamente a usuarios-consultas
+    if (user.role === 'gestion_humana') {
+        return <Navigate to="/usuarios-consultas" replace />;
+    }
+
     // Por defecto redirigir a página principal, a menos que se especifique dashboard
     const currentUrl = window.location.pathname;
     if (currentUrl === '/dashboard') {
@@ -28,7 +33,6 @@ export function DashboardRedirect() {
         const dashboardUrls = {
             'procesos': '/dashboard/procesos',
             'comercial': '/dashboard/comercial',
-            'gestion_humana': '/dashboard/gestion-humana',
             'administrador': '/dashboard/administrador',
             'oficial_cumplimiento': '/dashboard/cumplimiento'
         };
@@ -41,7 +45,6 @@ export function DashboardRedirect() {
     const dashboardUrls = {
         'procesos': '/dashboard/procesos',
         'comercial': '/dashboard/comercial',
-        'gestion_humana': '/dashboard/gestion-humana',
         'administrador': '/dashboard/administrador',
         'oficial_cumplimiento': '/dashboard/cumplimiento'
     };

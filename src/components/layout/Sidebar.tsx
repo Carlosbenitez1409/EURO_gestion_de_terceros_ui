@@ -45,7 +45,7 @@ const menuItems: MenuItem[] = [
         label: "Dashboard",
         icon: Home,
         path: "/dashboard",
-        roles: ["comercial", "procesos", "gestion_humana", "administrador"],
+        roles: ["comercial", "procesos", "administrador"],
         description: "Vista principal con métricas y gestión de terceros"
     },
     {
@@ -53,7 +53,7 @@ const menuItems: MenuItem[] = [
         label: "Usuarios",
         icon: Users,
         path: "/empleados",
-        roles: ["gestion_humana", "administrador"],
+        roles: ["administrador"],
         badge: 5,
         badgeVariant: "secondary",
         description: "Gestión exclusiva de empleados",
@@ -63,26 +63,26 @@ const menuItems: MenuItem[] = [
                 label: "Nuevo usuario",
                 icon: Users,
                 path: "/empleados/registro",
-                roles: ["gestion_humana", "administrador"]
+                roles: [ "administrador"]
             },
             {
                 id: "empleados-lista",
                 label: "Lista de usuarios",
                 icon: Users,
                 path: "/empleados/lista",
-                roles: ["gestion_humana", "administrador"],
+                roles: ["administrador"],
                 badge: 5,
                 badgeVariant: "secondary"
             }
         ]
     },
     {
-        id: "usuarios",
-        label: "Empleados",
+        id: "consultas_usuarios",
+        label: "Usuarios GH",
         icon: Users,
-        path: "/usuarios",
-        roles: ["procesos", "administrador"],
-        description: "Administración de usuarios"
+        path: "/usuarios-consultas",
+        roles: ["procesos", "administrador", "gestion_humana"],
+        description: "Gestión de usuarios y consultas",
     },
 ];
 

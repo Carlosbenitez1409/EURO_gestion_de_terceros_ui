@@ -31,12 +31,38 @@ const getInformacionFinanciera = (tercero: TerceroData) => {
 };
 
 const getFuentesYRecursos = (tercero: TerceroData) => {
-    return {
-        fuentesFondos: tercero.fuentes_fondos || tercero.fuentesFondos || [],
-        origenFondos: tercero.origen_fondos || tercero.origenFondos || '',
-        tiposRecursos: tercero.tipos_recursos || tercero.tiposRecursos || [],
-        tiposOperaciones: tercero.tipos_operaciones_extranjera || tercero.tiposOperacionesMonedaExtranjera || []
+    console.log('🔍 TerceroView - getFuentesYRecursos input:', {
+        fuentes_fondos: tercero.fuentes_fondos,
+        fuentesFondos: tercero.fuentesFondos,
+        tipos_recursos: tercero.tipos_recursos,
+        tiposRecursos: tercero.tiposRecursos,
+        tipos_operaciones_extranjera: tercero.tipos_operaciones_extranjera,
+        tiposOperacionesMonedaExtranjera: tercero.tiposOperacionesMonedaExtranjera
+    });
+
+    // Helper para asegurar que devolvemos arrays válidos
+    const ensureArray = (value: any): any[] => {
+        if (Array.isArray(value)) return value;
+        if (typeof value === 'string') {
+            try {
+                const parsed = JSON.parse(value);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        }
+        return [];
     };
+
+    const result = {
+        fuentesFondos: ensureArray(tercero.fuentes_fondos || tercero.fuentesFondos),
+        origenFondos: tercero.origen_fondos || tercero.origenFondos || '',
+        tiposRecursos: ensureArray(tercero.tipos_recursos || tercero.tiposRecursos),
+        tiposOperaciones: ensureArray(tercero.tipos_operaciones_extranjera || tercero.tiposOperacionesMonedaExtranjera)
+    };
+
+    console.log('🔍 TerceroView - getFuentesYRecursos result:', result);
+    return result;
 };
 
 const getInformacionSARLAFT = (tercero: TerceroData) => {
@@ -94,6 +120,8 @@ const procesarInformacionPEP = (tercero: TerceroData) => {
     console.log('🔍 TerceroView - Procesando información PEP del tercero:', tercero.id);
     console.log('🔍 TerceroView - informacion_pep (backend):', tercero.informacion_pep);
     console.log('🔍 TerceroView - informacionPEP (frontend):', tercero.informacionPEP);
+    console.log('🔍 TerceroView - tipo de informacion_pep:', typeof tercero.informacion_pep);
+    console.log('🔍 TerceroView - tipo de informacionPEP:', typeof tercero.informacionPEP);
     
     // Función helper para parsear datos PEP (pueden venir como string JSON o array)
     const parsearDatosPEP = (datos: any): any[] => {
@@ -175,6 +203,7 @@ import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { LoadingSpinner } from "@/components/common/LoadingStates";
 import {
     User,
@@ -437,6 +466,18 @@ interface TerceroData {
     notas_internas?: string;
     prioridad_comercial?: string;
     activo?: boolean;
+
+    // Campos de condiciones de pago comercial
+    condiciones_pago_8_dias?: boolean;
+    condiciones_pago_15_dias?: boolean;
+    condiciones_pago_30_dias?: boolean;
+    condiciones_pago_45_dias?: boolean;
+    condiciones_pago_60_dias?: boolean;
+    condiciones_pago_otro?: boolean;
+    condiciones_pago_otro_valor?: string;
+    otras_condiciones_pago?: string;
+    condiciones_pago_establecidas_por?: any;
+    fecha_establecimiento_condiciones?: string;
 }
 interface DocumentoTercero {
     id: string;
@@ -484,6 +525,20 @@ function TerceroView() {
     // Estados para listado de documentos Stradata subidos
     const [documentosStratadaSubidos, setDocumentosStratadaSubidos] = useState<DocumentoStradataUpload[]>([]);
     const [loadingDocumentosSubidos, setLoadingDocumentosSubidos] = useState(false);
+
+    // Estados para edición del Perfil Comercial
+    const [editandoPerfil, setEditandoPerfil] = useState(false);
+    const [condicionesPago, setCondicionesPago] = useState({
+        ocho_dias: false,
+        quince_dias: false,
+        treinta_dias: false,
+        cuarenta_cinco_dias: false,
+        sesenta_dias: false,
+        otro: false,
+        otro_valor: '',
+        observaciones: ''
+    });
+    const [guardandoPerfil, setGuardandoPerfil] = useState(false);
 
     // Hook para manejo de documentos de debida diligencia
     const {
@@ -633,6 +688,15 @@ function TerceroView() {
         const resultado = tercero ? procesarInformacionPEP(tercero) : [];
         console.log('🔍 TerceroView - useMemo informacionPEP resultado:', resultado);
         console.log('🔍 TerceroView - informacionPEP.length:', resultado.length);
+        
+        // Debug adicional para entender el problema
+        if (tercero) {
+            console.log('🔍 PEP DEBUG - tercero.informacion_pep:', tercero.informacion_pep);
+            console.log('🔍 PEP DEBUG - tercero.informacionPEP:', tercero.informacionPEP);
+            console.log('🔍 PEP DEBUG - tercero.pep:', tercero.pep);
+            console.log('🔍 PEP DEBUG - tercero.persona_expuesta_politica:', tercero.persona_expuesta_politica);
+        }
+        
         return resultado;
     }, [tercero]);
 
@@ -751,6 +815,22 @@ function TerceroView() {
 
         fetchUsuariosDisponibles();
     }, []);
+
+    // Cargar condiciones de pago cuando se carga el tercero
+    useEffect(() => {
+        if (tercero) {
+            setCondicionesPago({
+                ocho_dias: tercero.condiciones_pago_8_dias || false,
+                quince_dias: tercero.condiciones_pago_15_dias || false,
+                treinta_dias: tercero.condiciones_pago_30_dias || false,
+                cuarenta_cinco_dias: tercero.condiciones_pago_45_dias || false,
+                sesenta_dias: tercero.condiciones_pago_60_dias || false,
+                otro: tercero.condiciones_pago_otro || false,
+                otro_valor: tercero.condiciones_pago_otro_valor || '',
+                observaciones: tercero.otras_condiciones_pago || ''
+            });
+        }
+    }, [tercero]);
 
     const getStatusBadge = (status: string) => {
         const variants = {
@@ -1172,26 +1252,44 @@ function TerceroView() {
     const getExentoRenta = () => getBooleanValue(tercero.exentoRenta, tercero.exento_renta);
     const getCondicionesExentoRenta = () => getStringValue(tercero.condicionesExentoRenta, tercero.condiciones_exento_renta);
 
+    // Funciones para condiciones de pago comercial
+    const getCondicionesPago8Dias = () => getBooleanValue(tercero.condiciones_pago_8_dias, undefined);
+    const getCondicionesPago15Dias = () => getBooleanValue(tercero.condiciones_pago_15_dias, undefined);
+    const getCondicionesPago30Dias = () => getBooleanValue(tercero.condiciones_pago_30_dias, undefined);
+    const getCondicionesPago45Dias = () => getBooleanValue(tercero.condiciones_pago_45_dias, undefined);
+    const getCondicionesPago60Dias = () => getBooleanValue(tercero.condiciones_pago_60_dias, undefined);
+    const getCondicionesPagoOtro = () => getBooleanValue(tercero.condiciones_pago_otro, undefined);
+    const getCondicionesPagoOtroValor = () => getStringValue(tercero.condiciones_pago_otro_valor, undefined);
+    const getOtrasCondicionesPago = () => getStringValue(tercero.otras_condiciones_pago, undefined);
+
     // Funciones para campos financieros (pueden ser string o number)
     const getIngresoMensual = () => {
         const val1 = tercero.ingresoMensual;
         const val2 = tercero.ingreso_mensual;
-        return (val1?.toString() || val2?.toString() || '');
+        if (val1 !== null && val1 !== undefined && val1 !== '') return val1.toString();
+        if (val2 !== null && val2 !== undefined && val2 !== '') return val2.toString();
+        return '';
     };
     const getCostosGastos = () => {
         const val1 = tercero.costosGastos;
         const val2 = tercero.costos_gastos_mensuales;
-        return (val1?.toString() || val2?.toString() || '');
+        if (val1 !== null && val1 !== undefined && val1 !== '') return val1.toString();
+        if (val2 !== null && val2 !== undefined && val2 !== '') return val2.toString();
+        return '';
     };
     const getOtrosIngresos = () => {
         const val1 = tercero.otrosIngresos;
         const val2 = tercero.otros_ingresos;
-        return (val1?.toString() || val2?.toString() || '');
+        if (val1 !== null && val1 !== undefined && val1 !== '') return val1.toString();
+        if (val2 !== null && val2 !== undefined && val2 !== '') return val2.toString();
+        return '';
     };
     const getTotalIngresos = () => {
         const val1 = tercero.totalIngresos;
         const val2 = tercero.total_ingresos;
-        return (val1?.toString() || val2?.toString() || '');
+        if (val1 !== null && val1 !== undefined && val1 !== '') return val1.toString();
+        if (val2 !== null && val2 !== undefined && val2 !== '') return val2.toString();
+        return '';
     };
 
     const getDetalleOtrosIngresos = () => getStringValue(tercero.detalleOtrosIngresos, tercero.detalle_otros_ingresos);
@@ -1413,6 +1511,76 @@ function TerceroView() {
                 variant: "destructive"
             });
         }
+    };
+
+    // 💼 Funciones para manejo del Perfil Comercial
+    const iniciarEdicionPerfil = () => {
+        setEditandoPerfil(true);
+    };
+
+    const cancelarEdicionPerfil = () => {
+        // Restaurar valores originales
+        setCondicionesPago({
+            ocho_dias: tercero?.condiciones_pago_8_dias || false,
+            quince_dias: tercero?.condiciones_pago_15_dias || false,
+            treinta_dias: tercero?.condiciones_pago_30_dias || false,
+            cuarenta_cinco_dias: tercero?.condiciones_pago_45_dias || false,
+            sesenta_dias: tercero?.condiciones_pago_60_dias || false,
+            otro: tercero?.condiciones_pago_otro || false,
+            otro_valor: tercero?.condiciones_pago_otro_valor || '',
+            observaciones: tercero?.otras_condiciones_pago || ''
+        });
+        setEditandoPerfil(false);
+    };
+
+    const guardarPerfilComercial = async () => {
+        if (!tercero?.id) return;
+
+        setGuardandoPerfil(true);
+        try {
+            const datosActualizacion = {
+                condiciones_pago_8_dias: condicionesPago.ocho_dias,
+                condiciones_pago_15_dias: condicionesPago.quince_dias,
+                condiciones_pago_30_dias: condicionesPago.treinta_dias,
+                condiciones_pago_45_dias: condicionesPago.cuarenta_cinco_dias,
+                condiciones_pago_60_dias: condicionesPago.sesenta_dias,
+                condiciones_pago_otro: condicionesPago.otro,
+                condiciones_pago_otro_valor: condicionesPago.otro ? condicionesPago.otro_valor : '',
+                otras_condiciones_pago: condicionesPago.observaciones
+            };
+
+            const response = await apiRequest.patch(`/terceros/${tercero.id}/`, datosActualizacion);
+
+            if (response) {
+                // Actualizar el tercero local
+                setTercero(prev => prev ? { ...prev, ...datosActualizacion } : null);
+                setEditandoPerfil(false);
+                
+                toast({
+                    title: "✅ Perfil comercial actualizado",
+                    description: "Las condiciones de pago han sido guardadas exitosamente",
+                    variant: "success"
+                });
+            }
+        } catch (error) {
+            console.error('❌ Error guardando perfil comercial:', error);
+            toast({
+                title: "❌ Error al guardar",
+                description: "No se pudo actualizar el perfil comercial",
+                variant: "destructive"
+            });
+        } finally {
+            setGuardandoPerfil(false);
+        }
+    };
+
+    const actualizarCondicion = (campo: string, valor: boolean | string) => {
+        setCondicionesPago(prev => ({
+            ...prev,
+            [campo]: valor,
+            // Si deseleccionamos "otro", limpiar el valor específico
+            ...(campo === 'otro' && !valor ? { otro_valor: '' } : {})
+        }));
     };
 
     if (loading) {
@@ -2163,6 +2331,249 @@ function TerceroView() {
                                 </Card>
                             )}
 
+                        {/* Perfil Comercial - Condiciones de Pago (Interactivo para comerciales) */}
+                        {(user?.role === 'comercial' || user?.role === 'administrador' || user?.role === 'procesos') && (
+                            <Card className="shadow-lg border-blue-200 border">
+                                <CardHeader>
+                                    <CardTitle className="text-[#0052CC] flex items-center gap-2 justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <CreditCard className="h-5 w-5" />
+                                            Perfil Comercial
+                                            {tercero.condiciones_pago_establecidas_por && !editandoPerfil && (
+                                                <Badge variant="secondary" className="ml-2 text-xs">
+                                                    Solo lectura
+                                                </Badge>
+                                            )}
+                                            {editandoPerfil && (
+                                                <Badge variant="default" className="ml-2 text-xs bg-blue-600">
+                                                    Editando
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        
+                                        {/* Botones de acción - Solo para comerciales */}
+                                        {user?.role === 'comercial' && !editandoPerfil && (
+                                            <Button
+                                                onClick={iniciarEdicionPerfil}
+                                                size="sm"
+                                                className="bg-blue-600 hover:bg-blue-700"
+                                            >
+                                                <CreditCard className="h-4 w-4 mr-2" />
+                                                {tercero.condiciones_pago_establecidas_por ? 'Modificar' : 'Establecer'}
+                                            </Button>
+                                        )}
+                                        
+                                        {editandoPerfil && (
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    onClick={cancelarEdicionPerfil}
+                                                    size="sm"
+                                                    variant="outline"
+                                                    disabled={guardandoPerfil}
+                                                >
+                                                    Cancelar
+                                                </Button>
+                                                <Button
+                                                    onClick={guardarPerfilComercial}
+                                                    size="sm"
+                                                    className="bg-green-600 hover:bg-green-700"
+                                                    disabled={guardandoPerfil}
+                                                >
+                                                    {guardandoPerfil ? (
+                                                        <>
+                                                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                                            Guardando...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <CreditCard className="h-4 w-4 mr-2" />
+                                                            Guardar
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </CardTitle>
+                                    
+                                    {tercero.condiciones_pago_establecidas_por && tercero.fecha_establecimiento_condiciones && !editandoPerfil && (
+                                        <CardDescription className="text-sm text-gray-600">
+                                            Condiciones establecidas el {new Date(tercero.fecha_establecimiento_condiciones).toLocaleDateString('es-CO')} por el área comercial
+                                        </CardDescription>
+                                    )}
+                                </CardHeader>
+                                
+                                <CardContent className="space-y-6">
+                                    {/* Condiciones de Pago */}
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-gray-900 mb-4">
+                                            Condiciones de pago:
+                                        </h4>
+                                        
+                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+                                            {/* 8 días */}
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id="pago-8-dias"
+                                                    checked={editandoPerfil ? condicionesPago.ocho_dias : getCondicionesPago8Dias()}
+                                                    onCheckedChange={(checked) => editandoPerfil && actualizarCondicion('ocho_dias', checked)}
+                                                    disabled={!editandoPerfil}
+                                                    className="data-[state=checked]:bg-yellow-400 data-[state=checked]:border-yellow-400"
+                                                />
+                                                <Label htmlFor="pago-8-dias" className="text-sm font-medium cursor-pointer">
+                                                    8 días
+                                                </Label>
+                                            </div>
+
+                                            {/* 15 días */}
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id="pago-15-dias"
+                                                    checked={editandoPerfil ? condicionesPago.quince_dias : getCondicionesPago15Dias()}
+                                                    onCheckedChange={(checked) => editandoPerfil && actualizarCondicion('quince_dias', checked)}
+                                                    disabled={!editandoPerfil}
+                                                    className="data-[state=checked]:bg-yellow-400 data-[state=checked]:border-yellow-400"
+                                                />
+                                                <Label htmlFor="pago-15-dias" className="text-sm font-medium cursor-pointer">
+                                                    15 días
+                                                </Label>
+                                            </div>
+
+                                            {/* 30 días */}
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id="pago-30-dias"
+                                                    checked={editandoPerfil ? condicionesPago.treinta_dias : getCondicionesPago30Dias()}
+                                                    onCheckedChange={(checked) => editandoPerfil && actualizarCondicion('treinta_dias', checked)}
+                                                    disabled={!editandoPerfil}
+                                                    className="data-[state=checked]:bg-yellow-400 data-[state=checked]:border-yellow-400"
+                                                />
+                                                <Label htmlFor="pago-30-dias" className="text-sm font-medium cursor-pointer">
+                                                    30 días
+                                                </Label>
+                                            </div>
+
+                                            {/* 45 días */}
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id="pago-45-dias"
+                                                    checked={editandoPerfil ? condicionesPago.cuarenta_cinco_dias : getCondicionesPago45Dias()}
+                                                    onCheckedChange={(checked) => editandoPerfil && actualizarCondicion('cuarenta_cinco_dias', checked)}
+                                                    disabled={!editandoPerfil}
+                                                    className="data-[state=checked]:bg-yellow-400 data-[state=checked]:border-yellow-400"
+                                                />
+                                                <Label htmlFor="pago-45-dias" className="text-sm font-medium cursor-pointer">
+                                                    45 días
+                                                </Label>
+                                            </div>
+
+                                            {/* 60 días */}
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id="pago-60-dias"
+                                                    checked={editandoPerfil ? condicionesPago.sesenta_dias : getCondicionesPago60Dias()}
+                                                    onCheckedChange={(checked) => editandoPerfil && actualizarCondicion('sesenta_dias', checked)}
+                                                    disabled={!editandoPerfil}
+                                                    className="data-[state=checked]:bg-yellow-400 data-[state=checked]:border-yellow-400"
+                                                />
+                                                <Label htmlFor="pago-60-dias" className="text-sm font-medium cursor-pointer">
+                                                    60 días
+                                                </Label>
+                                            </div>
+                                        </div>
+
+                                        {/* Campo "Otro" con especificación */}
+                                        <div className="space-y-3 mb-4">
+                                            <div className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id="pago-otro"
+                                                    checked={editandoPerfil ? condicionesPago.otro : getCondicionesPagoOtro()}
+                                                    onCheckedChange={(checked) => editandoPerfil && actualizarCondicion('otro', checked)}
+                                                    disabled={!editandoPerfil}
+                                                    className="data-[state=checked]:bg-yellow-400 data-[state=checked]:border-yellow-400"
+                                                />
+                                                <Label htmlFor="pago-otro" className="text-sm font-medium cursor-pointer">
+                                                    Otro
+                                                </Label>
+                                            </div>
+                                            
+                                            {/* Campo de especificación que aparece cuando "Otro" está seleccionado */}
+                                            {(editandoPerfil ? condicionesPago.otro : getCondicionesPagoOtro()) && (
+                                                <div className="ml-6 space-y-2">
+                                                    <Label htmlFor="otro-especificacion" className="text-xs text-gray-600">
+                                                        Por favor especifique:
+                                                    </Label>
+                                                    {editandoPerfil ? (
+                                                        <Input
+                                                            id="otro-especificacion"
+                                                            value={condicionesPago.otro_valor}
+                                                            onChange={(e) => actualizarCondicion('otro_valor', e.target.value)}
+                                                            placeholder="Especifique las condiciones de pago..."
+                                                            className="text-sm border-yellow-200 focus:border-yellow-400"
+                                                        />
+                                                    ) : (
+                                                        <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-sm font-medium">
+                                                            {getCondicionesPagoOtroValor() || 'No especificado'}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Observaciones */}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="observaciones" className="text-sm font-medium text-gray-700">
+                                                Observaciones:
+                                            </Label>
+                                            {editandoPerfil ? (
+                                                <textarea
+                                                    id="observaciones"
+                                                    value={condicionesPago.observaciones}
+                                                    onChange={(e) => actualizarCondicion('observaciones', e.target.value)}
+                                                    placeholder="Observaciones adicionales sobre las condiciones comerciales..."
+                                                    className="w-full p-3 border border-gray-300 rounded-md text-sm resize-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                                                    rows={3}
+                                                />
+                                            ) : (
+                                                getOtrasCondicionesPago() ? (
+                                                    <div className="bg-gray-50 p-3 rounded border text-sm text-gray-900">
+                                                        {getOtrasCondicionesPago()}
+                                                    </div>
+                                                ) : (
+                                                    <div className="bg-gray-50 p-3 rounded border text-sm text-gray-500 italic">
+                                                        Sin observaciones
+                                                    </div>
+                                                )
+                                            )}
+                                        </div>
+
+                                        {/* Mensaje cuando no hay condiciones establecidas */}
+                                        {!editandoPerfil && !tercero.condiciones_pago_establecidas_por && 
+                                         !getCondicionesPago8Dias() && 
+                                         !getCondicionesPago15Dias() && 
+                                         !getCondicionesPago30Dias() && 
+                                         !getCondicionesPago45Dias() && 
+                                         !getCondicionesPago60Dias() && 
+                                         !getCondicionesPagoOtro() && (
+                                            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                                <div className="flex items-center gap-2 text-blue-800">
+                                                    <CreditCard className="h-5 w-5" />
+                                                    <span className="font-medium">Condiciones comerciales pendientes</span>
+                                                </div>
+                                                <p className="text-sm text-blue-600 mt-2">
+                                                    Las condiciones de pago para este tercero aún no han sido establecidas por el área comercial.
+                                                </p>
+                                                {user?.role === 'comercial' && (
+                                                    <p className="text-xs text-blue-500 mt-1">
+                                                        Haga clic en "Establecer" para configurar las condiciones de pago.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
                         {/* Información Financiera Estados Financieros */}
                         {(tercero.activos_corrientes || tercero.patrimonio_liquido || tercero.ingresos_operacionales) && (
                             <Card>
@@ -2285,7 +2696,7 @@ function TerceroView() {
                                     <CardContent className="pt-6">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             {/* Fuentes de Fondos */}
-                                            {fuentesYRecursos.fuentesFondos.length > 0 && (
+                                            {Array.isArray(fuentesYRecursos.fuentesFondos) && fuentesYRecursos.fuentesFondos.length > 0 && (
                                                 <div>
                                                     <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
                                                         <DollarSign className="h-4 w-4 mr-1 text-green-600" />
@@ -2303,7 +2714,7 @@ function TerceroView() {
                                             )}
 
                                             {/* Tipos de Recursos */}
-                                            {fuentesYRecursos.tiposRecursos.length > 0 && (
+                                            {Array.isArray(fuentesYRecursos.tiposRecursos) && fuentesYRecursos.tiposRecursos.length > 0 && (
                                                 <div>
                                                     <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
                                                         <CreditCard className="h-4 w-4 mr-1 text-blue-600" />
@@ -2321,7 +2732,7 @@ function TerceroView() {
                                             )}
 
                                             {/* Operaciones Moneda Extranjera */}
-                                            {fuentesYRecursos.tiposOperaciones.length > 0 && (
+                                            {Array.isArray(fuentesYRecursos.tiposOperaciones) && fuentesYRecursos.tiposOperaciones.length > 0 && (
                                                 <div className="md:col-span-2">
                                                     <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
                                                         <Globe className="h-4 w-4 mr-1 text-orange-600" />
@@ -2342,63 +2753,7 @@ function TerceroView() {
                                 </Card>
                             )}
 
-                        {/* 🚀 NUEVA SECCIÓN: Información Financiera Mejorada */}
-                        {datosFinancieros && (() => {
-                            console.log('🎯 RENDERIZANDO SECCIÓN FINANCIERA MEJORADA - Datos:', datosFinancieros);
-                            return true;
-                        })() && (
-                                <Card className="border-2 border-green-300 shadow-lg">
-                                    <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200">
-                                        <CardTitle className="text-lg font-semibold text-green-800 flex items-center">
-                                            <DollarSign className="h-5 w-5 mr-2" />
-                                            Información Financiera Consolidada
-                                        </CardTitle>
-                                        <CardDescription className="text-green-600">
-                                            ✨ Datos financieros procesados con compatibilidad dual - Sección mejorada activa
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="pt-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            <div className="bg-blue-50 p-4 rounded border border-blue-200">
-                                                <label className="text-sm font-medium text-blue-700">Ingreso Mensual</label>
-                                                <p className="text-lg font-semibold text-blue-900">
-                                                    {formatearMoneda(datosFinancieros.ingresoMensual)}
-                                                </p>
-                                            </div>
-                                            <div className="bg-red-50 p-4 rounded border border-red-200">
-                                                <label className="text-sm font-medium text-red-700">Costos y Gastos</label>
-                                                <p className="text-lg font-semibold text-red-900">
-                                                    {formatearMoneda(datosFinancieros.costosGastos)}
-                                                </p>
-                                            </div>
-                                            <div className="bg-purple-50 p-4 rounded border border-purple-200">
-                                                <label className="text-sm font-medium text-purple-700">Otros Ingresos</label>
-                                                <p className="text-lg font-semibold text-purple-900">
-                                                    {formatearMoneda(datosFinancieros.otrosIngresos)}
-                                                </p>
-                                            </div>
-                                            <div className="bg-green-50 p-4 rounded border border-green-200">
-                                                <label className="text-sm font-medium text-green-700">Total Ingresos</label>
-                                                <p className="text-lg font-semibold text-green-900">
-                                                    {formatearMoneda(datosFinancieros.totalIngresos)}
-                                                </p>
-                                            </div>
-                                            <div className="bg-indigo-50 p-4 rounded border border-indigo-200">
-                                                <label className="text-sm font-medium text-indigo-700">Activos</label>
-                                                <p className="text-lg font-semibold text-indigo-900">
-                                                    {formatearMoneda(datosFinancieros.activos)}
-                                                </p>
-                                            </div>
-                                            <div className="bg-orange-50 p-4 rounded border border-orange-200">
-                                                <label className="text-sm font-medium text-orange-700">Patrimonio</label>
-                                                <p className="text-lg font-semibold text-orange-900">
-                                                    {formatearMoneda(datosFinancieros.patrimonio)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )}
+
 
                         {/* SARLAFT/PEP - Información Completa */}
                         {(() => {
@@ -3328,11 +3683,8 @@ function TerceroView() {
                     </CardContent>
                 </Card>
 
-                {/* Subir Documentos de Stradata - Para usuarios autorizados */}
-                {(() => {
-                    console.log('🔍 Debug - Usuario rol para Stradata:', user?.role);
-                    return (user?.role === 'procesos' || user?.role === 'administrador' || user?.role === 'oficial_cumplimiento' || true);
-                })() && (
+                {/* Subir Documentos de Stradata - Para usuarios autorizados (NO COMERCIALES) */}
+                {(user?.role === 'procesos' || user?.role === 'administrador' || user?.role === 'oficial_cumplimiento') && (
                         <Card className="shadow-lg border-purple-200 border mt-8">
                             {/* Header con gradiente mejorado */}
                             <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-6 rounded-t-lg">

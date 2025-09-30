@@ -37,6 +37,11 @@ import Login from "./pages/Login";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 import { UserProvider } from "./hooks/useUser";
+import { 
+  UsuariosConsultasWrapper, 
+  NuevaSolicitudWrapper, 
+  DetalleSolicitudWrapper 
+} from "./components/UsuariosConsultasWrappers";
 
 const queryClient = new QueryClient();
 
@@ -57,8 +62,8 @@ const App = () => (
           <BrowserRouter>
         <Routes>
           <Route path="/" element={
-            <ProtectedRoute requiredRole="procesos">
-              <DashboardWithProvider userRole="procesos" />
+            <ProtectedRoute>
+              <DashboardRedirect />
             </ProtectedRoute>
           } />
           <Route path="/login" element={<Login />} />
@@ -253,6 +258,23 @@ const App = () => (
                 <h1 className="text-2xl font-bold text-gray-800 mb-4">Configuración de Validaciones</h1>
                 <p className="text-gray-600">Esta funcionalidad estará disponible próximamente.</p>
               </div>
+            </ProtectedRoute>
+          } />
+          
+          {/* Rutas de Usuarios GH */}
+          <Route path="/usuarios-consultas" element={
+            <ProtectedRoute requiredRole={["gestion_humana", "administrador", "procesos"]}>
+              <UsuariosConsultasWrapper />
+            </ProtectedRoute>
+          } />
+          <Route path="/usuarios-consultas/nueva" element={
+            <ProtectedRoute requiredRole={["gestion_humana"]}>
+              <NuevaSolicitudWrapper />
+            </ProtectedRoute>
+          } />
+          <Route path="/usuarios-consultas/:id" element={
+            <ProtectedRoute requiredRole={["gestion_humana", "administrador", "procesos"]}>
+              <DetalleSolicitudWrapper />
             </ProtectedRoute>
           } />
           
