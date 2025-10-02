@@ -403,12 +403,12 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 const paisesOrdenados = colombia ? [colombia, ...otrosPaises] : paisesData;
                 
                 setPaises(paisesOrdenados);
-                console.log(`🌎 Países cargados: ${paisesOrdenados.length}`);
-                console.log(`🥇 Primer país en el array:`, paisesOrdenados[0]);
+
+
                 console.log(`🇨🇴 Colombia en el array:`, colombia);
 
                 // Verificar el país inicial en formData
-                console.log(`🔍 Estado actual de formData.pais:`, formData.pais);
+
                 
                 // Si el país por defecto es Colombia (CO), filtrar ciudades colombianas
                 const paisInicial = formData.pais || 'CO';
@@ -416,14 +416,14 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 
                 if (paisInicial && paisInicial !== 'OTHER') {
                     const paisSeleccionado = paisesOrdenados.find(p => p.short_alpha_code === paisInicial);
-                    console.log(`🔍 País encontrado en JSON:`, paisSeleccionado);
+
                     
                     if (paisSeleccionado) {
                         const ciudadesDelPais = (citiesData as City[]).filter(c => c.country_id === paisSeleccionado.id);
                         setCiudadesFiltradas(ciudadesDelPais);
-                        console.log(`🏙️ Ciudades iniciales cargadas para ${paisSeleccionado.name}: ${ciudadesDelPais.length}`);
+
                     } else {
-                        console.log(`❌ No se encontró país con código: ${paisInicial}`);
+
                     }
                 }
             } catch (error) {
@@ -441,7 +441,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
             try {
                 // 🐛 DEBUG: Verificar configuraciones
                 console.log('� DEBUG API_CONFIG:', API_CONFIG);
-                console.log('🐛 DEBUG API_CONFIG.baseURL:', API_CONFIG.baseURL);
+
 
                 // 🌐 Crear instancia de axios SIN interceptors de autenticación para endpoint público
                 const publicAxios = axios.create({
@@ -454,11 +454,11 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 });
 
                 const url = `/public/comerciales-disponibles/`;
-                console.log(`🔍 Cargando comerciales desde endpoint público: ${API_CONFIG.baseURL}${url}`);
+
 
                 const response = await publicAxios.get(url);
 
-                console.log('📋 Respuesta del servidor (endpoint público):', response.data);
+
 
                 // El endpoint público puede devolver diferentes formatos, vamos a manejar ambos
                 let comerciales = [];
@@ -466,17 +466,17 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 // Formato 1: {success: true, comerciales: [...], total: number}
                 if (response.data && response.data.success && response.data.comerciales) {
                     comerciales = response.data.comerciales;
-                    console.log('✅ Formato de respuesta: {success: true, comerciales: [...]}');
+
                 }
                 // Formato 2: {usuarios_por_departamento: {comercial: [...]}}
                 else if (response.data && response.data.usuarios_por_departamento && response.data.usuarios_por_departamento.comercial) {
                     comerciales = response.data.usuarios_por_departamento.comercial;
-                    console.log('✅ Formato de respuesta: {usuarios_por_departamento: {comercial: [...]}}');
+
                 }
                 // Formato 3: Array directo
                 else if (Array.isArray(response.data)) {
                     comerciales = response.data;
-                    console.log('✅ Formato de respuesta: Array directo');
+
                 }
 
                 if (comerciales && comerciales.length > 0) {
@@ -495,7 +495,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                     });
 
                     setComerciales(comercialesFormateados);
-                    console.log('✅ Comerciales del endpoint público cargados:', comercialesFormateados);
+
                 } else {
                     console.warn('⚠️ No hay comerciales disponibles en el sistema');
                     setComerciales([]);
@@ -526,15 +526,15 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                     let alertMessage = "No se pudieron cargar los comerciales. Contacte al administrador.";
 
                     if (axiosError.response?.status === 404) {
-                        console.log('🔍 Endpoint público de comerciales no encontrado');
+
                         alertTitle = "🔍 Servicio No Disponible";
                         alertMessage = "El servicio de comerciales no está disponible temporalmente. Puede continuar sin asignar comercial.";
                     } else if (axiosError.response?.status >= 500) {
-                        console.log('🚨 Error del servidor al cargar comerciales');
+
                         alertTitle = "🚨 Error del Servidor";
                         alertMessage = "Error interno del servidor al cargar comerciales. Puede continuar el registro sin asignar comercial por ahora.";
                     } else if (axiosError.code === 'NETWORK_ERROR') {
-                        console.log('🌐 Error de conexión de red');
+
                         alertTitle = "🌐 Sin Conexión";
                         alertMessage = "No se pudo conectar para cargar los comerciales. Verifique su conexión a internet.";
                     }
@@ -571,7 +571,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
 
     // Effect para cargar ciudades al cambiar país
     useEffect(() => {
-        console.log(`🔄 País cambió a: ${formData.pais}`);
+
         if (formData.pais && formData.pais !== 'OTHER') {
             loadCiudadesPorPais(formData.pais);
         } else {
@@ -582,7 +582,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
     // Effect para cargar ciudades iniciales cuando se cargan los países
     useEffect(() => {
         if (paises.length > 0 && formData.pais && formData.pais !== 'OTHER') {
-            console.log(`🚀 Forzando carga inicial de ciudades para: ${formData.pais}`);
+
             loadCiudadesPorPais(formData.pais);
         }
     }, [paises, formData.pais]);
@@ -626,10 +626,10 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
             // Filtrar ciudades usando los datos JSON directamente
             const ciudadesDelPais = (citiesData as City[]).filter(c => c.country_id === paisSeleccionado.id);
             setCiudadesFiltradas(ciudadesDelPais);
-            console.log(`🏙️ Ciudades encontradas para ${paisCode}:`, ciudadesDelPais.length);
+
         } else {
             setCiudadesFiltradas([]);
-            console.log(`❌ No se encontró país con código: ${paisCode}`);
+
         }
     };
 
@@ -681,10 +681,10 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
     };
 
     const handleFileUpload = (documentKey: string, file: File | File[] | null) => {
-        console.log('handleFileUpload called:', documentKey, Array.isArray(file) ? `${file.length} files` : file?.name);
+
         setFormData(prev => {
             const newDocumentos = { ...prev.documentos, [documentKey]: file };
-            console.log('📎 Documentos actualizados en estado:', newDocumentos);
+
             return {
                 ...prev,
                 documentos: newDocumentos
@@ -1141,12 +1141,12 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
     const handleSubmit = async () => {
         // Prevenir múltiples envíos
         if (isSubmitting) {
-            console.log('🔄 Ya hay un envío en curso, ignorando...');
+
             return;
         }
 
         async function enviarFormularioCompleto(formularioCompleto: any, documentos: any) {
-            console.log('🚀 Enviando registro público a /api/terceros/');
+
 
             try {
                 const formData = new FormData();
@@ -1177,7 +1177,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 // ✅ CAMPO COMERCIAL ASIGNADO - CRÍTICO PARA LA ASIGNACIÓN
                 if (formularioCompleto.comercialAsignado && formularioCompleto.tipoFormulario === "vinculacion") {
                     formData.append('comercialAsignado', formularioCompleto.comercialAsignado);
-                    console.log(`👤 Comercial asignado agregado: ${formularioCompleto.comercialAsignado}`);
+
                 }
 
                 // 🏛️ INFORMACIÓN PEP - CRÍTICA
@@ -1312,20 +1312,20 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 // 📋 REPRESENTANTES (para personas jurídicas)
                 if (formularioCompleto.representantes && formularioCompleto.representantes.length > 0) {
                     formData.append('representantes', JSON.stringify(formularioCompleto.representantes));
-                    console.log(`👥 Representantes agregados: ${formularioCompleto.representantes.length} representantes`);
+
                 }
 
                 // 💰 ACCIONISTAS (para personas jurídicas)
                 if (formularioCompleto.accionistas && formularioCompleto.accionistas.length > 0) {
                     formData.append('accionistas', JSON.stringify(formularioCompleto.accionistas));
-                    console.log(`💰 Accionistas agregados: ${formularioCompleto.accionistas.length} accionistas`);
+
                 }
 
                 // Agregar archivos
                 if (documentos) {
                     Object.entries(documentos).forEach(([key, file]) => {
                         if (file && file instanceof File) {
-                            console.log(`📎 Agregando archivo: ${key} -> ${file.name}`);
+
                             formData.append(key, file);
                         }
                     });
@@ -1354,7 +1354,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                     }
                 );
 
-                console.log('✅ Respuesta exitosa:', response.data);
+
 
                 return {
                     success: true,
@@ -1381,26 +1381,18 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                     if (Array.isArray(file)) {
                         file.forEach((singleFile, index) => {
                             const fieldName = `${tipoDocumentoBackend}_${index + 1}`;
-                            console.log(`Agregando documento múltiple ${documentKey}[${index}] -> ${fieldName}`);
+
                             formData.append(fieldName, singleFile);
                         });
                     } else {
-                        console.log(`Agregando documento ${documentKey} -> ${tipoDocumentoBackend}`);
+
                         // ✅ CORRECCIÓN: Usar el tipo de documento como nombre del campo, no 'documentos'
                         formData.append(tipoDocumentoBackend, file);
                     }
                 }
             });
 
-            // Agregar logging para verificar el FormData antes del envío
-            console.log('📦 FormData entries antes del envío:');
-            for (let [key, value] of formData.entries()) {
-                if (value instanceof File) {
-                    console.log(`  ${key}: ${value.name} (${value.size} bytes)`);
-                } else {
-                    console.log(`  ${key}: ${value}`);
-                }
-            }
+
 
             formData.append('tercero_id', terceroId);
 
@@ -1414,7 +1406,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                     },
                 });
 
-                console.log('✅ Documentos enviados exitosamente - Respuesta completa:', response.data);
+
                 console.log('📊 Detalles de la respuesta:', {
                     success: response.data?.success,
                     message: response.data?.message,
@@ -1423,7 +1415,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                     response_keys: Object.keys(response.data || {})
                 });
                 // No devolver la respuesta de documentos, solo confirmar que se enviaron
-                console.log('✅ Documentos enviados exitosamente para tercero:', terceroId);
+
 
             } catch (error) {
                 console.error('❌ Error al enviar documentos');
@@ -1480,7 +1472,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 // ✅ VALIDACIÓN DE PORCENTAJES DE ACCIONISTAS - MÁS ESTRICTA
                 if (formData.accionistas && formData.accionistas.length > 0) {
                     const totalPorcentaje = formData.accionistas.reduce((sum: number, acc: any) => sum + acc.porcentajeParticipacion, 0);
-                    console.log(`🔍 Validando porcentajes: ${totalPorcentaje.toFixed(2)}%`);
+
 
                     // Verificar porcentajes individuales
                     for (const accionista of formData.accionistas) {
@@ -1503,7 +1495,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                         return;
                     }
 
-                    console.log(`✅ Validación de porcentajes OK: ${totalPorcentaje.toFixed(2)}%`);
+
                 }
 
                 // Convertir IDs de ubicación a nombres usando JSON
@@ -1613,8 +1605,8 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                     comercial_asignado: formData.tipoFormulario === "actualizacion" ? undefined : (formData.comercialAsignado || undefined)
                 };
 
-                console.log('📝 Datos originales del formulario:', formData);
-                console.log('📎 Documentos en el estado antes de enviar:', formData.documentos);
+
+
 
                 // Actualizar formData con ubicaciones convertidas
                 const formDataActualizado = {
@@ -1623,8 +1615,8 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                     pais: paisNombre
                 };
 
-                console.log('📤 Datos actualizados que se enviarán al backend:', formDataActualizado);
-                console.log('📎 Documentos que se enviarán:', formData.documentos);
+
+
                 
                 // 🔍 Log específico para campos tributarios y financieros
                 console.log('💰 Campos tributarios a enviar:', {
@@ -1651,9 +1643,9 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                 // ✅ Usar método actualizado: enviar datos como JSON + documentos por separado
                 const response = await enviarFormularioCompleto(formDataActualizado, formData.documentos);
 
-                console.log('Respuesta exitosa de la API:', response);
-                console.log('Tipo de response:', typeof response);
-                console.log('Keys de response:', Object.keys(response || {}));
+
+
+
 
                 // Validar que la respuesta existe y tiene la estructura esperada
                 if (!response) {
@@ -1678,7 +1670,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                     ? `Tu solicitud de actualización ha sido enviada con ID: ${terceroId} y será revisada directamente por el administrador del sistema. Serás redirigido al login en 3 segundos...`
                     : `Tu solicitud ha sido enviada con ID: ${terceroId}. Tu solicitud está siendo procesada. Serás redirigido al login en 3 segundos...`;
 
-                console.log('🎉 Mostrando toast de éxito:', { titulo, descripcion });
+
 
                 toast({
                     title: titulo,
@@ -1690,20 +1682,20 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                         color: 'white'
                     }
                 });
-                console.log('✅ Toast de éxito enviado correctamente');
+
 
                 // Ejecutar callback con los datos originales del formulario
-                console.log('📋 Ejecutando onComplete callback...');
+
                 onComplete(formData);
 
                 // ✅ Redireccionar al login después de 3 segundos
-                console.log('⏰ Programando redirección al login en 3 segundos...');
+
                 const redirectTimer = setTimeout(() => {
-                    console.log('🚀 ¡3 segundos completados! Redirigiendo al login ahora...');
+
                     navigate('/login');
                 }, 3000);
 
-                console.log('⏰ Timer ID:', redirectTimer, '- La redirección ocurrirá en 3 segundos');
+
 
             } catch (error: any) {
                 console.error('❌ Error completo de la API:', error);
@@ -1744,7 +1736,7 @@ export default function ProveedorRegistro({ onComplete, onBackToHome }: Proveedo
                         if (jsonStart !== -1) {
                             const jsonError = error.message.substring(jsonStart);
                             const errorData = JSON.parse(jsonError);
-                            console.log('📋 Datos de error parseados:', errorData);
+
 
                             // Usar la función analizarErrorBackend para procesar el error
                             const { title: customTitle, message: customMessage } = analizarErrorBackend(errorData);

@@ -82,9 +82,6 @@ export const ConsultaStratadaModal: React.FC<ConsultaStratadaModalProps> = ({
 
             // Verificar si la consulta fue exitosa usando la estructura real del backend
             if (resultado.consulta_realizada && resultado.resultados?.consulta_exitosa) {
-                // Log de debug para ver la respuesta completa
-                console.log('🔍 DEBUG - Respuesta exitosa de Stradata:', resultado);
-                
                 // Extraer información detallada de la respuesta
                 const resultados = resultado.resultados;
                 const personasConsultadas = resultado.personas_consultadas?.length || 0;
@@ -127,9 +124,6 @@ export const ConsultaStratadaModal: React.FC<ConsultaStratadaModalProps> = ({
                     onSuccess(resultado);
                 }
             } else {
-                // Log de debug para ver la respuesta de error
-                console.log('❌ DEBUG - Respuesta de error de Stradata:', resultado);
-                
                 // Manejar respuesta de error del backend
                 const errorMessage = resultado.resultados?.detalles || "No se pudo completar la consulta en Stradata";
                 const servicios = resultado.resultados?.resumen_servicios;

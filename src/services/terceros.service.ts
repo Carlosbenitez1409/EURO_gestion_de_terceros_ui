@@ -401,7 +401,7 @@ class TercerosService {
             }
 
             const userData = await userResponse.json();
-            console.log('🔍 CumplimientoService - Usuario actual:', userData);
+
             
             // Usar el nuevo endpoint con filtro por asignado_cumplimiento
             const response = await fetch(`${this.baseUrl}/terceros/?asignado_cumplimiento=${userData.id}`, {
@@ -416,12 +416,6 @@ class TercerosService {
             }
 
             const data = await response.json();
-            console.log('🔍 CumplimientoService - Datos recibidos:', {
-                url: `${this.baseUrl}/terceros/?asignado_cumplimiento=${userData.id}`,
-                count: data.count,
-                results: data.results?.length || 0,
-                terceros: data.results
-            });
             
             return data.results || [];
         } catch (error) {

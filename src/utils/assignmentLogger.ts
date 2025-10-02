@@ -5,24 +5,18 @@ import { tercerosDRFService } from '@/services/terceros.drf.service';
 
 export const verificarCambioEstado = async (terceroId: string, estadoEsperado: string) => {
     try {
-        console.log('🔍 Verificando estado actual del tercero:', terceroId);
+
         
         // Obtener el tercero actualizado
         const terceroActualizado = await tercerosDRFService.getTercero(terceroId);
         
-        console.log('📊 Estado verificado:', {
-            terceroId,
-            estadoActual: terceroActualizado.estado_aprobacion,
-            estadoEsperado,
-            cambioExitoso: terceroActualizado.estado_aprobacion === estadoEsperado,
-            terceroCompleto: terceroActualizado
-        });
+        
         
         if (terceroActualizado.estado_aprobacion === estadoEsperado) {
-            console.log('✅ Estado cambió correctamente a:', estadoEsperado);
+
             return true;
         } else {
-            console.log('⚠️ Estado no cambió. Actual:', terceroActualizado.estado_aprobacion, 'Esperado:', estadoEsperado);
+
             return false;
         }
         
@@ -44,10 +38,7 @@ export const useAssignmentLogger = () => {
         success: boolean;
         error?: any;
     }) => {
-        console.log('📋 RESUMEN DE ASIGNACIÓN:', {
-            timestamp: new Date().toISOString(),
-            ...data
-        });
+        
         
         if (data.success) {
             console.log('🎉 ASIGNACIÓN EXITOSA');

@@ -33,7 +33,7 @@ export const comercialesService = {
      */
     async getComerciales(): Promise<Comercial[]> {
         try {
-            console.log('🔍 Obteniendo comerciales disponibles...');
+
             const response = await apiClient.get('/api/terceros/comerciales_disponibles/');
             console.log('✅ Comerciales obtenidos:', response.data);
             return response.data;

@@ -32,16 +32,16 @@ export const useDebidaDiligencia = (terceroId: string): UseDebidaDiligenciaRetur
     // Cargar documentos desde el servidor
     const cargarDocumentos = useCallback(async () => {
         if (!terceroId) {
-            console.log('⚠️ Debug - No hay terceroId, no se cargan documentos');
+
             return;
         }
 
-        console.log('🔍 Debug - Cargando documentos para tercero:', terceroId);
+
         setState(prev => ({ ...prev, loading: true, error: null }));
         
         try {
             const documentos = await debidaDiligenciaService.obtenerDocumentos(terceroId);
-            console.log('✅ Debug - Documentos cargados:', documentos?.length || 0);
+
             setState(prev => ({
                 ...prev,
                 documentos,
@@ -67,18 +67,17 @@ export const useDebidaDiligencia = (terceroId: string): UseDebidaDiligenciaRetur
     const subirDocumento = useCallback(async (
         data: DebidaDiligenciaUploadRequest
     ): Promise<DebidaDiligenciaDocumento | null> => {
-        console.log('📤 Hook - INICIANDO SUBIDA DE DOCUMENTO');
-        console.log('📤 Hook - Datos a subir:', data);
+
         
         setState(prev => ({ ...prev, uploading: true, error: null }));
 
         try {
             const respuestaSubida = await debidaDiligenciaService.subirDocumento(data);
-            console.log('📤 Hook - Respuesta de subida recibida:', respuestaSubida);
+
             
             // Extraer el documento real de la respuesta del servidor
             const documentoReal = (respuestaSubida as any).documento || respuestaSubida;
-            console.log('📤 Hook - Documento extraído:', documentoReal);
+
             
             // Verificar que el documento tiene los campos requeridos
             if (!documentoReal || !documentoReal.id) {
@@ -89,8 +88,7 @@ export const useDebidaDiligencia = (terceroId: string): UseDebidaDiligenciaRetur
             // Actualizar la lista local agregando solo el documento válido
             setState(prev => {
                 const nuevaLista = [...prev.documentos, documentoReal];
-                console.log('📤 Hook - Nueva lista de documentos:', nuevaLista);
-                console.log('📤 Hook - Documento agregado tiene ID:', documentoReal.id);
+
                 return {
                     ...prev,
                     documentos: nuevaLista,
@@ -129,10 +127,7 @@ export const useDebidaDiligencia = (terceroId: string): UseDebidaDiligenciaRetur
         documentoId: string, 
         nombreDocumento: string
     ): Promise<void> => {
-        console.log('⬇️ Hook - INICIANDO DESCARGA');
-        console.log('⬇️ Hook - Documento ID:', documentoId);
-        console.log('⬇️ Hook - Tipo de ID:', typeof documentoId);
-        console.log('⬇️ Hook - Nombre documento:', nombreDocumento);
+
         
         // Validación en el hook antes de llamar al servicio (ahora string UUID)
         if (!documentoId || documentoId === undefined || documentoId === null || documentoId === 'undefined' || documentoId === 'null' || documentoId.trim() === '') {
@@ -149,7 +144,7 @@ export const useDebidaDiligencia = (terceroId: string): UseDebidaDiligenciaRetur
         try {
             // No pasamos tercero_id - las URLs del backend no lo requieren según documentación
             await debidaDiligenciaService.descargarDocumento(documentoId);
-            console.log('⬇️ Hook - Descarga completada exitosamente');
+
             
             toast({
                 title: "Descarga iniciada",
@@ -223,12 +218,12 @@ export const useDebidaDiligencia = (terceroId: string): UseDebidaDiligenciaRetur
     // Efecto para cargar documentos cuando cambia el tercero
     useEffect(() => {
         if (terceroId) {
-            console.log('📋 Debug - useEffect disparado, cargando documentos para tercero:', terceroId);
+
             // Limpiar documentos anteriores inmediatamente
             setState(prev => ({ ...prev, documentos: [], loading: true }));
             cargarDocumentos();
         } else {
-            console.log('📋 Debug - No hay terceroId, limpiando documentos');
+
             setState(prev => ({ ...prev, documentos: [] }));
         }
     }, [terceroId, cargarDocumentos]);

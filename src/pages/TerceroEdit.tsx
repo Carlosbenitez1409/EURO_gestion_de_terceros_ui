@@ -108,14 +108,7 @@ export default function TerceroEdit() {
     const { toast } = useToast();
 
     // 🔍 LOGS DETALLADOS PARA VERIFICAR PERMISOS EN EDICIÓN
-    console.log('🔍 TerceroEdit - Usuario actual:', {
-        user,
-        role: user?.role,
-        id: user?.id,
-        email: user?.email,
-        terceroId: id,
-        isAuthenticated: !!user
-    });
+
 
     const [formData, setFormData] = useState<TerceroData>({
         id: '',
@@ -160,7 +153,7 @@ export default function TerceroEdit() {
             'enviado_cumplimiento': 'asignada_oficial_cumplimiento'
         };
 
-        console.log('🔧 mapearEstadoLegacy:', estado, '→', mapeoEstados[estado] || estado);
+
         return mapeoEstados[estado] || estado as TerceroData['estado_aprobacion'];
     };
 
@@ -184,15 +177,15 @@ export default function TerceroEdit() {
                 setLoading(true);
                 const data = await tercerosDRFService.getTercero(id!);
 
-                console.log('🔍 TerceroEdit - Datos del tercero cargados:', data);
-                console.log('🔍 TerceroEdit - razon_social:', data.razon_social);
-                console.log('🔍 TerceroEdit - nombre_completo:', data.nombre_completo);
-                console.log('🔍 TerceroEdit - nombres:', data.nombres);
-                console.log('🔍 TerceroEdit - apellidos:', data.apellidos);
+
+
+
+
+
 
                 // 🆕 MAPEAR ESTADOS LEGACY Y CAMPOS DE ASIGNACIÓN CENTRALIZADOS
                 const estadoMapeado = mapearEstadoLegacy(data.estado_aprobacion);
-                console.log('🔧 Mapeo de estado:', data.estado_aprobacion, '→', estadoMapeado);
+
 
                 const mappedData: TerceroData = {
                     ...data,
@@ -207,8 +200,8 @@ export default function TerceroEdit() {
                     fecha_asignacion_actual: data.fecha_asignacion
                 };
 
-                console.log('📥 Datos mapeados:', mappedData);
-                console.log('📥 razon_social final:', mappedData.razon_social);
+
+
 
                 setFormData(mappedData);
                 setOriginalData({ ...data, estado_aprobacion: estadoMapeado }); // Guardar también con estado mapeado
@@ -224,10 +217,10 @@ export default function TerceroEdit() {
         const fetchComentariosCompletos = async () => {
             try {
                 setLoadingAuditoria(true);
-                console.log('🔍 Cargando comentarios completos para ID:', id);
+
                 
                 const comentarios = await tercerosDRFService.obtenerComentarios(id!);
-                console.log('✅ Comentarios completos cargados en TerceroEdit:', comentarios);
+
                 
                 setDatosAuditoria(comentarios);
                 
@@ -265,7 +258,7 @@ export default function TerceroEdit() {
                 try {
                     console.log('🔄 Recargando datos del tercero después de asignación exitosa');
                     const data = await tercerosDRFService.getTercero(id);
-                    console.log('✅ Datos recargados después de asignación:', data);
+
 
                     // 🔧 CORREGIDO: Sincronizar ambos estados completamente para evitar "cambios fantasma"
                     console.log('� Sincronizando formData y originalData para evitar envíos innecesarios');
@@ -329,7 +322,7 @@ export default function TerceroEdit() {
         setSaving(true);
 
         try {
-            console.log('🔍 DEBUG ESTADO:');
+
             console.log('- formData.estado_aprobacion:', formData.estado_aprobacion);
             console.log('- originalData.estado_aprobacion:', originalData?.estado_aprobacion);
             console.log('- stateChanged:', stateChanged);
@@ -394,7 +387,7 @@ export default function TerceroEdit() {
             }
             // Lógica específica para oficial de cumplimiento
             else if (user?.role === 'oficial_cumplimiento') {
-                console.log('🔍 Usuario oficial_cumplimiento detectado, gestionando asignación automática');
+
 
                 // Si cambió el estado, usar endpoint específico
                 // ✅ Validaciones adicionales para evitar cambios innecesarios
@@ -407,7 +400,7 @@ export default function TerceroEdit() {
                     console.log('🔄 Ejecutando cambio de estado para oficial_cumplimiento:', formData.estado_aprobacion);
 
                     const estadoParaBackend = mapearEstadoParaBackend(formData.estado_aprobacion);
-                    console.log('🔧 Enviando estado al backend (cumplimiento):', formData.estado_aprobacion, '→', estadoParaBackend);
+
 
                     await tercerosDRFService.changeState(id!, {
                         estado: estadoParaBackend as any, // 🔧 Estado mapeado para backend
@@ -439,11 +432,11 @@ export default function TerceroEdit() {
             }
             // Lógica para administradores, procesos y comerciales (con permisos completos)
             else if (['administrador', 'procesos', 'comercial'].includes(user?.role || '')) {
-                console.log('🔍 Usuario con permisos completos detectado:', user?.role);
-                console.log('🔍 Datos a guardar:', formData);
-                console.log('🔍 Estado cambió:', stateChanged);
-                console.log('🔍 Otros cambios:', hasOtherChanges());
-                console.log('🔍 Estado actual:', formData.estado_aprobacion);
+
+
+
+
+
 
                 // Si solo cambió el estado, usar el endpoint específico
                 // ✅ Validaciones adicionales para evitar cambios innecesarios
@@ -458,7 +451,7 @@ export default function TerceroEdit() {
                     // 🆕 LÓGICA ESPECIAL PARA PROCESOS - Usar endpoints específicos de aprobar/rechazar
                     if (user?.role === 'procesos' && (formData.estado_aprobacion === 'aprobado' || formData.estado_aprobacion === 'rechazado')) {
                         if (formData.estado_aprobacion === 'aprobado') {
-                            console.log('✅ Procesos - Usando endpoint /aprobar/');
+
                             await tercerosDRFService.aprobarTercero(id!, 
                                 formData.observaciones || 'Aprobado por departamento de procesos'
                             );
@@ -518,7 +511,7 @@ export default function TerceroEdit() {
                         }
 
                         const estadoParaBackend = mapearEstadoParaBackend(formData.estado_aprobacion);
-                        console.log('🔧 Enviando estado al backend (cambio general):', formData.estado_aprobacion, '→', estadoParaBackend);
+
 
                         await tercerosDRFService.changeState(id!, {
                             estado: estadoParaBackend as any, // 🔧 Estado mapeado para backend
@@ -535,7 +528,7 @@ export default function TerceroEdit() {
                 } else {
                     // Actualización completa para admins y procesos
                     const estadoParaBackend = mapearEstadoParaBackend(formData.estado_aprobacion);
-                    console.log('🔧 Enviando estado al backend:', formData.estado_aprobacion, '→', estadoParaBackend);
+
 
                     await tercerosDRFService.updateTercero(id!, {
                         tipo_documento: formData.tipo_documento,
@@ -665,13 +658,7 @@ export default function TerceroEdit() {
         // 🔧 MAPEAR ESTADO ANTES DE PROCESAR (por si viene del backend sin mapear)
         const estadoMapeado = mapearEstadoLegacy(estadoActual);
 
-        console.log('🔍 getTransicionesPermitidas DEBUG - ENTRADA:', {
-            estadoActual,
-            estadoMapeado,
-            rol,
-            formDataEstado: formData.estado_aprobacion,
-            userCompleto: user
-        });
+
 
         if (!rol) {
             console.log('❌ No hay rol de usuario, devolviendo array vacío');
@@ -684,17 +671,17 @@ export default function TerceroEdit() {
                 console.log('👤 Procesando transiciones para COMERCIAL');
                 switch (estadoMapeado) {
                     case 'pendiente':
-                        console.log('✅ Estado pendiente → permitir en_curso_comercial');
+
                         return ['en_curso_comercial'];
                     case 'en_curso_comercial':
-                        console.log('✅ Estado en_curso_comercial → permitir asignada_administrador, devuelto_comercial');
+
                         return ['asignada_administrador', 'devuelto_comercial'];
                     case 'devuelto_comercial':
-                        console.log('✅ Estado devuelto_comercial → permitir en_curso_comercial, asignada_administrador');
+
                         return ['en_curso_comercial', 'asignada_administrador'];
                     // 🆕 Estados legacy que pueden aparecer
                     case 'en_espera_correccion':
-                        console.log('✅ Estado legacy en_espera_correccion → permitir en_curso_comercial');
+
                         return ['en_curso_comercial', 'asignada_administrador'];
                     default:
                         console.log(`❌ Estado '${estadoMapeado}' no tiene transiciones para comercial - devolviendo opciones básicas`);
@@ -702,16 +689,16 @@ export default function TerceroEdit() {
                 }
 
             case 'administrador':
-                console.log('👑 Procesando transiciones para ADMINISTRADOR');
+
                 switch (estadoMapeado) {
                     case 'asignada_administrador':
-                        console.log('✅ Estado asignada_administrador → permitir en_curso_administrador, asignada_procesos, devuelto_comercial');
+
                         return ['en_curso_administrador', 'asignada_procesos', 'devuelto_comercial'];
                     case 'en_curso_administrador':
-                        console.log('✅ Estado en_curso_administrador → permitir asignada_procesos, devuelto_comercial');
+
                         return ['asignada_procesos', 'devuelto_comercial'];
                     case 'devuelto_comercial':
-                        console.log('✅ Estado devuelto_comercial → administrador puede asignar a cualquier estado');
+
                         return ['en_curso_administrador', 'asignada_procesos', 'asignada_administrador'];
                     // 🆕 Estados adicionales para administradores
                     case 'pendiente':
@@ -1321,16 +1308,11 @@ export default function TerceroEdit() {
                                         <SelectContent>
                                             {(() => {
                                                 const transiciones = getTransicionesPermitidas();
-                                                console.log('🔍 DEBUG DROPDOWN - Transiciones disponibles:', {
-                                                    transiciones,
-                                                    cantidad: transiciones.length,
-                                                    estadoActual: formData.estado_aprobacion,
-                                                    rolUsuario: user?.role
-                                                });
+
 
                                                 // Si no hay transiciones, mostrar al menos el estado actual
                                                 if (transiciones.length === 0) {
-                                                    console.log('⚠️ No hay transiciones disponibles, mostrando estado actual');
+
                                                     return (
                                                         <SelectItem key={formData.estado_aprobacion} value={formData.estado_aprobacion}>
                                                             {getStateLabel(formData.estado_aprobacion)} (Estado actual)

@@ -176,7 +176,7 @@ export class StratadaService {
 
             const response = await apiRequest.post<ConsultaStradataResponse>(`${this.baseUrl}/ejecutar/`, data);
             
-            console.log('✅ Consulta masiva exitosa:', response);
+
             return response;
         } catch (error) {
             console.error('❌ Error en consulta masiva:', error);
@@ -204,13 +204,13 @@ export class StratadaService {
      */
     async obtenerResumenPersonasTercero(terceroId: string): Promise<ResumenPersonasTerceroResponse> {
         try {
-            console.log(`📋 Obteniendo resumen de personas para tercero: ${terceroId}`);
+
 
             const response = await apiRequest.get<ResumenPersonasTerceroResponse>(
                 `/stradata/terceros/${terceroId}/resumen-personas/`
             );
             
-            console.log('✅ Resumen obtenido exitosamente:', response);
+
             return response;
         } catch (error) {
             console.error('❌ Error obteniendo resumen de personas:', error);
@@ -226,14 +226,14 @@ export class StratadaService {
         credenciales: ConsultarTerceroStradataRequest
     ): Promise<ConsultarTerceroStradataResponse> {
         try {
-            console.log(`🔍 Ejecutando consulta Stradata integrada para tercero: ${terceroId}`);
+
 
             const response = await apiRequest.postStradata<ConsultarTerceroStradataResponse>(
                 `/stradata/terceros/${terceroId}/consultar-stradata/`,
                 credenciales
             );
             
-            console.log('✅ Consulta Stradata integrada exitosa:', response);
+
             return response;
         } catch (error) {
             console.error('❌ Error en consulta Stradata integrada:', error);
@@ -295,7 +295,7 @@ export class StratadaService {
             }
         });
 
-        console.log(`📡 Response status: ${response.status}`);
+
 
         if (!response.ok) {
             if (response.status === 404) {
@@ -314,7 +314,7 @@ export class StratadaService {
         }
 
         const data = await response.json();
-        console.log('✅ Documentos Stradata obtenidos:', data);
+
         
         // Validar estructura de respuesta
         if (!data || !Array.isArray(data.documentos)) {
@@ -384,7 +384,7 @@ export class StratadaService {
             const token = TokenStorage.getAccessToken();
             const url = this.construirUrlDescarga(archivo);
             
-            console.log('📥 Descargando documento Stradata usando endpoint seguro:', url);
+
             
             const response = await fetch(url, {
                 method: 'GET',
@@ -423,11 +423,8 @@ export class StratadaService {
      * Debug: Verificar configuración de URLs
      */
     static debugUrls(): void {
-        console.log('🔧 DEBUG URLs de Stradata:');
-        console.log('📍 APP_CONFIG.api.url:', APP_CONFIG.api.url);
-        console.log('📍 APP_CONFIG.api.baseUrl:', APP_CONFIG.api.baseUrl);
-        console.log('📍 URL scraping ejemplo:', `${APP_CONFIG.api.url}/terceros/123/scraping/`);
-        console.log('📍 URL documentos ejemplo:', `${APP_CONFIG.api.url}/terceros/123/documentos-stradata/`);
+        // Debug function - logs removed for production
+        // URLs can be verified through network tab in dev tools
     }
 }
 
@@ -440,14 +437,10 @@ export class StradataConsultasMasivas {
    */
   async ejecutarConsultaMasiva(request: ConsultaStradataRequest): Promise<ConsultaStradataResponse> {
     try {
-      console.log('🔍 Ejecutando consulta Stradata masiva:', {
-        terceros_count: request.terceros_ids.length,
-        usuario: request.usuario_stradata
-      });
 
       const response = await apiRequest.post<ConsultaStradataResponse>(`${this.baseUrl}/ejecutar/`, request);
       
-      console.log('✅ Consulta Stradata exitosa:', response);
+
       return response;
     } catch (error) {
       console.error('❌ Error en consulta Stradata:', error);
@@ -506,7 +499,7 @@ export class StradataConsultasMasivas {
     try {
       // Primero obtener los tipos de documento disponibles
       const tiposDocumento = await this.obtenerTiposDocumento();
-      console.log('📋 Tipos de documento disponibles:', tiposDocumento);
+
       
       // Buscar un tipo específico para Stradata o usar un genérico
       let tipoDocumentoId = tiposDocumento.find(tipo => 
@@ -530,7 +523,7 @@ export class StradataConsultasMasivas {
         throw new Error('No se encontraron tipos de documento disponibles');
       }
 
-      console.log('📤 Subiendo documento Stradata con tipo:', tipoDocumentoId);
+
 
       const formData = new FormData();
       formData.append('file', archivo);  
@@ -541,22 +534,12 @@ export class StradataConsultasMasivas {
         formData.append('descripcion', descripcion);
       }
 
-      console.log('📤 Subiendo documento Stradata:', {
-        terceroId,
-        archivo: archivo.name,
-        size: archivo.size,
-        type: archivo.type,
-        documentTypeId: tipoDocumentoId,
-        description: descripcion,
-        endpoint: `/terceros/${terceroId}/upload_document/`
-      });
-
       const response = await apiRequest.post<TerceroDocument>(
         `/terceros/${terceroId}/upload_document/`, 
         formData
       );
 
-      console.log('✅ Documento subido exitosamente:', response);
+
       
       // Adaptar la respuesta al formato esperado
       return {
@@ -624,7 +607,7 @@ export class StradataConsultasMasivas {
         `${this.baseUrl}/documentos/${documentoId}/eliminar/`
       );
 
-      console.log('✅ Documento eliminado:', response);
+
       return response;
     } catch (error) {
       console.error('❌ Error eliminando documento:', error);
@@ -636,14 +619,14 @@ export class StradataConsultasMasivas {
    * 📋 Lista los documentos Stradata subidos para un tercero
    */
   async listarDocumentosStradata(terceroId: string): Promise<DocumentoStradataUpload[]> {
-    console.log(`📋 Listando documentos Stradata para tercero: ${terceroId}`);
+
     
     try {
       const response = await apiRequest.get<DocumentoStradataUpload[]>(
         `${this.baseUrl}/terceros/${terceroId}/documentos/`
       );
 
-      console.log('✅ Documentos Stradata listados:', response);
+
       return response;
     } catch (error) {
       console.error('❌ Error listando documentos Stradata:', error);

@@ -31,14 +31,6 @@ const getInformacionFinanciera = (tercero: TerceroData) => {
 };
 
 const getFuentesYRecursos = (tercero: TerceroData) => {
-    console.log('🔍 TerceroView - getFuentesYRecursos input:', {
-        fuentes_fondos: tercero.fuentes_fondos,
-        fuentesFondos: tercero.fuentesFondos,
-        tipos_recursos: tercero.tipos_recursos,
-        tiposRecursos: tercero.tiposRecursos,
-        tipos_operaciones_extranjera: tercero.tipos_operaciones_extranjera,
-        tiposOperacionesMonedaExtranjera: tercero.tiposOperacionesMonedaExtranjera
-    });
 
     // Helper para asegurar que devolvemos arrays válidos
     const ensureArray = (value: any): any[] => {
@@ -61,7 +53,7 @@ const getFuentesYRecursos = (tercero: TerceroData) => {
         tiposOperaciones: ensureArray(tercero.tipos_operaciones_extranjera || tercero.tiposOperacionesMonedaExtranjera)
     };
 
-    console.log('🔍 TerceroView - getFuentesYRecursos result:', result);
+
     return result;
 };
 
@@ -117,11 +109,7 @@ const formatearMoneda = (value: string | number | undefined) => {
 
 // 🚀 Función helper para procesar información PEP con compatibilidad dual
 const procesarInformacionPEP = (tercero: TerceroData) => {
-    console.log('🔍 TerceroView - Procesando información PEP del tercero:', tercero.id);
-    console.log('🔍 TerceroView - informacion_pep (backend):', tercero.informacion_pep);
-    console.log('🔍 TerceroView - informacionPEP (frontend):', tercero.informacionPEP);
-    console.log('🔍 TerceroView - tipo de informacion_pep:', typeof tercero.informacion_pep);
-    console.log('🔍 TerceroView - tipo de informacionPEP:', typeof tercero.informacionPEP);
+
     
     // Función helper para parsear datos PEP (pueden venir como string JSON o array)
     const parsearDatosPEP = (datos: any): any[] => {
@@ -156,17 +144,17 @@ const procesarInformacionPEP = (tercero: TerceroData) => {
     // Si tenemos datos del backend, usarlos exclusivamente (evitar duplicación)
     let todasLasPersonasPEP: any[];
     if (informacion_pep_backend.length > 0) {
-        console.log('🔍 TerceroView - Usando datos PEP del backend:', informacion_pep_backend.length, 'registros');
+
         todasLasPersonasPEP = informacion_pep_backend;
     } else if (informacion_pep_frontend.length > 0) {
-        console.log('🔍 TerceroView - Usando datos PEP del frontend:', informacion_pep_frontend.length, 'registros');
+
         todasLasPersonasPEP = informacion_pep_frontend;
     } else {
-        console.log('🔍 TerceroView - No hay datos PEP disponibles');
+
         todasLasPersonasPEP = [];
     }
     
-    console.log('🔍 TerceroView - Datos PEP procesados:', todasLasPersonasPEP);
+
     
     // Normalizar formato - convertir todo a camelCase para compatibilidad con la UI existente
     return todasLasPersonasPEP.map((persona: any, index: number) => ({
@@ -575,7 +563,7 @@ function TerceroView() {
     } = useStratadaIntegration({ terceroId: tercero?.id || '' });
 
     // Debug logging para modal
-    console.log('🔍 TerceroView - Estado modal consulta:', modalConsultaAbierto);
+
 
 
 
@@ -592,7 +580,7 @@ function TerceroView() {
 
     // Función para mantener compatibilidad (no hace nada ya que no hay carga automática)
     const cargarDocumentosStradata = () => {
-        console.log('ℹ️ Los documentos Stradata ahora se gestionan manualmente por el usuario');
+
     };
 
     // 🆕 Estados para Consulta Stradata Simple (LEGACY - mantener por compatibilidad)
@@ -600,7 +588,7 @@ function TerceroView() {
 
     // Función para abrir modal de consulta (LEGACY)
     const abrirModalConsulta = () => {
-        console.log('🔍 abrirModalConsulta - Iniciando consulta completa...');
+
         // Usar la nueva funcionalidad integrada
         iniciarConsultaCompleta();
     };
@@ -623,7 +611,7 @@ function TerceroView() {
         }
 
         try {
-            console.log(`📥 Descargando documento Stradata ID: ${documento.id}`);
+
 
             const url = `${APP_CONFIG.api.baseUrl}/stradata/documentos/${documento.id}/descargar/`;
             const token = TokenStorage.getAccessToken();
@@ -656,7 +644,7 @@ function TerceroView() {
             document.body.removeChild(a);
             window.URL.revokeObjectURL(downloadUrl);
 
-            console.log('✅ Documento descargado correctamente');
+
             toast({
                 title: "✅ Descarga exitosa",
                 description: `Documento ${documento.nombre} descargado`,
@@ -676,7 +664,7 @@ function TerceroView() {
     // 🚀 NUEVOS HELPERS CON MEMOIZACIÓN
     const datosFinancieros = useMemo(() => {
         const datos = tercero ? getInformacionFinanciera(tercero) : null;
-        console.log('🔍 TerceroView - Datos financieros procesados:', datos);
+
         return datos;
     }, [tercero]);
 
@@ -686,15 +674,11 @@ function TerceroView() {
 
     const informacionPEP = useMemo(() => {
         const resultado = tercero ? procesarInformacionPEP(tercero) : [];
-        console.log('🔍 TerceroView - useMemo informacionPEP resultado:', resultado);
-        console.log('🔍 TerceroView - informacionPEP.length:', resultado.length);
+
         
         // Debug adicional para entender el problema
         if (tercero) {
-            console.log('🔍 PEP DEBUG - tercero.informacion_pep:', tercero.informacion_pep);
-            console.log('🔍 PEP DEBUG - tercero.informacionPEP:', tercero.informacionPEP);
-            console.log('🔍 PEP DEBUG - tercero.pep:', tercero.pep);
-            console.log('🔍 PEP DEBUG - tercero.persona_expuesta_politica:', tercero.persona_expuesta_politica);
+
         }
         
         return resultado;
@@ -712,12 +696,12 @@ function TerceroView() {
         const fetchTercero = async () => {
             try {
                 setLoading(true);
-                console.log('🔍 Cargando tercero con ID:', id);
+
 
                 // Usar solo el endpoint básico que incluye todos los datos necesarios
-                console.log('📡 Consultando endpoint básico de terceros:', API_ENDPOINTS.terceros(id));
+
                 const data = await apiRequest.get(API_ENDPOINTS.terceros(id));
-                console.log('✅ Tercero cargado exitosamente:', data);
+
 
                 setTercero(data);
 
@@ -733,10 +717,10 @@ function TerceroView() {
         const fetchDatosAuditoria = async () => {
             try {
                 setLoadingAuditoria(true);
-                console.log('🔍 Cargando auditoría completa v2 para ID:', id);
+
                 
                 const datosAuditoria = await tercerosDRFService.obtenerAuditoriaCompletaV2(id);
-                console.log('✅ Auditoría completa v2 cargada:', datosAuditoria);
+
                 
                 setDatosAuditoria(datosAuditoria);
                 
@@ -761,13 +745,13 @@ function TerceroView() {
 
             try {
                 setLoadingDocs(true);
-                console.log('📄 Cargando documentos del tercero...');
+
 
                 const response = await apiRequest.get(API_ENDPOINTS.documentosPorTercero(id));
 
                 if (response.documentos) {
                     setDocumentos(response.documentos);
-                    console.log(`✅ Documentos cargados: ${response.documentos.length}`);
+
                 } else {
                     console.warn('⚠️ No se encontraron documentos en la respuesta');
                     setDocumentos([]);
@@ -786,16 +770,16 @@ function TerceroView() {
     // Cargar documentos Stradata subidos cuando se carga el componente
     useEffect(() => {
         const puedeCargarStradata = user?.role === 'procesos' || user?.role === 'administrador' || user?.role === 'oficial_cumplimiento';
-        console.log('🔍 useEffect Stradata - ID:', id, 'Usuario puede cargar:', puedeCargarStradata);
+
         if (id && puedeCargarStradata) {
-            console.log('🚀 Cargando documentos Stradata subidos por el usuario...');
+
             cargarDocumentosStratadaSubidos();
         }
     }, [id, user?.role]);
 
     // Cargar estadísticas del tercero - temporalmente deshabilitado
     useEffect(() => {
-        console.log('📊 Carga de estadísticas deshabilitada temporalmente - endpoint no disponible');
+
     }, [id]);
 
     // 🆕 Cargar usuarios disponibles para asignaciones
@@ -804,7 +788,7 @@ function TerceroView() {
             setLoadingUsuarios(true);
             try {
                 const data = await apiRequest.get(API_ENDPOINTS.usuariosDisponibles);
-                console.log('👥 Usuarios disponibles cargados:', data);
+
                 setUsuariosDisponibles(data);
             } catch (error) {
                 console.error('❌ Error al cargar usuarios disponibles:', error);
@@ -953,7 +937,7 @@ function TerceroView() {
                 downloadUrl = `${baseServerUrl}/media/${url}`;
             }
 
-            console.log('📥 Descargando documento desde URL:', downloadUrl);
+
 
             const response = await fetch(downloadUrl, {
                 method: 'GET',
@@ -1022,12 +1006,7 @@ function TerceroView() {
         try {
             setUploading(true);
 
-            console.log('📤 Subiendo documento del tercero:', {
-                archivo: file.name,
-                tipo: tipoDocumento,
-                size: file.size,
-                terceroId: id
-            });
+
 
             const formData = new FormData();
             formData.append('archivo', file); // Cambio de 'file' a 'archivo' para backend Stradata
@@ -1055,7 +1034,7 @@ function TerceroView() {
             }
 
             const result = await response.json();
-            console.log('✅ Documento subido exitosamente:', result);
+
 
             toast({
                 title: "Documento subido",
@@ -1090,13 +1069,7 @@ function TerceroView() {
         try {
             setUploadingStradata(true);
 
-            console.log('🔄 Iniciando subida de documento Stradata:', {
-                archivo: file.name,
-                size: file.size,
-                type: file.type,
-                terceroId: id,
-                descripcion
-            });
+
 
             toast({
                 title: "Subiendo documento de Stradata",
@@ -1141,10 +1114,10 @@ function TerceroView() {
         try {
             setLoadingDocumentosSubidos(true);
             const url = `${APP_CONFIG.api.baseUrl}/stradata/terceros/${id}/documentos/`;
-            console.log(`📋 Cargando documentos Stradata desde: ${url}`);
+
 
             const token = TokenStorage.getAccessToken();
-            console.log(`🔑 Token disponible: ${token ? 'Sí' : 'No'}`);
+
 
             const response = await fetch(url, {
                 method: 'GET',
@@ -1154,13 +1127,11 @@ function TerceroView() {
                 }
             });
 
-            console.log(`📡 Response status: ${response.status}`);
-            console.log(`📡 Response headers:`, Object.fromEntries(response.headers.entries()));
+
 
             if (response.ok) {
                 const result = await response.json();
-                console.log('✅ Documentos Stradata cargados desde API');
-                console.log('🔍 Respuesta completa:', JSON.stringify(result, null, 2));
+
 
                 // Intentar diferentes estructuras de respuesta
                 let documentos = [];
@@ -1168,11 +1139,11 @@ function TerceroView() {
                 if (result.documentos && Array.isArray(result.documentos)) {
                     // Formato: {documentos: [...]}
                     documentos = result.documentos;
-                    console.log('📋 Usando result.documentos');
+
                 } else if (result.data?.documentos && Array.isArray(result.data.documentos)) {
                     // Formato: {data: {documentos: [...]}}
                     documentos = result.data.documentos;
-                    console.log('📋 Usando result.data.documentos');
+
                 } else if (Array.isArray(result.data)) {
                     // Formato: {data: [...]}
                     documentos = result.data;
@@ -1180,13 +1151,11 @@ function TerceroView() {
                 } else if (Array.isArray(result)) {
                     // Formato directo: [...]
                     documentos = result;
-                    console.log('📋 Usando result como array directo');
                 } else {
-                    console.log('⚠️ Formato de respuesta inesperado:', typeof result, Object.keys(result || {}));
                 }
 
                 setDocumentosStratadaSubidos(documentos);
-                console.log(`📊 ${documentos.length} documentos Stradata encontrados:`, documentos);
+
             } else {
                 const errorText = await response.text();
                 console.log(`❌ Error ${response.status}: ${errorText}`);
@@ -1213,12 +1182,12 @@ function TerceroView() {
         }
 
         try {
-            console.log(`🗑️ Eliminando documento ID: ${documentoId}`);
+
 
             const response = await stradataConsultasMasivas.eliminarDocumento(documentoId);
 
             if (response.success) {
-                console.log('✅ Documento eliminado correctamente');
+
                 toast({
                     title: "✅ Documento eliminado",
                     description: response.message || "El documento de Stradata ha sido eliminado correctamente",
@@ -1312,31 +1281,30 @@ function TerceroView() {
 
     // Función especial para obtener representantes (puede venir como string JSON)
     const getRepresentantesArray = (tercero: TerceroData) => {
-        console.log('🔍 TerceroView - getRepresentantesArray - tercero.representantes:', tercero.representantes);
+
         const reps = tercero.representantes;
         if (!reps) return [];
         if (typeof reps === 'string') {
             try {
                 const parsed = JSON.parse(reps);
-                console.log('🔍 TerceroView - Representantes parseados:', parsed);
+
                 return Array.isArray(parsed) ? parsed : [];
             } catch (error) {
                 console.error('❌ Error parseando representantes:', error);
                 return [];
             }
         }
-        console.log('🔍 TerceroView - Representantes directos:', reps);
+
         return Array.isArray(reps) ? reps : [];
     };
 
     // Función especial para obtener accionistas (puede venir como string JSON)
     const getAccionistasArray = (tercero: TerceroData) => {
-        console.log('🔍 TerceroView - getAccionistasArray - tercero.accionistas:', tercero.accionistas);
-        console.log('🔍 TerceroView - getAccionistasArray - tercero.accionistas_frontend:', tercero.accionistas_frontend);
+
         
         // USAR SIEMPRE tercero.accionistas (estructura jerárquica del backend)
         if (tercero.accionistas && Array.isArray(tercero.accionistas)) {
-            console.log('🔍 TerceroView - Usando estructura jerárquica del backend:', tercero.accionistas);
+
             return tercero.accionistas;
         }
         
@@ -1344,7 +1312,7 @@ function TerceroView() {
         if (tercero.accionistas && typeof tercero.accionistas === 'string') {
             try {
                 const parsed = JSON.parse(tercero.accionistas);
-                console.log('🔍 TerceroView - Accionistas parseados desde string:', parsed);
+
                 return Array.isArray(parsed) ? parsed : [];
             } catch (error) {
                 console.error('❌ Error parseando accionistas:', error);
@@ -1353,11 +1321,11 @@ function TerceroView() {
         
         // Solo como último recurso, usar accionistas_frontend (estructura plana)
         if (tercero.accionistas_frontend && Array.isArray(tercero.accionistas_frontend)) {
-            console.log('🔍 TerceroView - Fallback a estructura plana:', tercero.accionistas_frontend);
+
             return tercero.accionistas_frontend;
         }
         
-        console.log('🔍 TerceroView - No hay accionistas disponibles');
+
         return [];
     };
 
@@ -1419,10 +1387,7 @@ function TerceroView() {
     };
 
     const confirmarEliminacionDebidaDiligencia = (documentoId: string, nombreDocumento: string) => {
-        console.log('🗑️ TerceroView - CONFIRMACIÓN DE ELIMINACIÓN');
-        console.log('🗑️ TerceroView - Documento ID recibido:', documentoId);
-        console.log('🗑️ TerceroView - Tipo de ID:', typeof documentoId);
-        console.log('🗑️ TerceroView - Nombre documento:', nombreDocumento);
+
 
         if (!documentoId || documentoId === undefined || documentoId === null || documentoId === 'undefined' || documentoId === 'null' || documentoId.trim() === '') {
             console.error('❌ TerceroView - ID de documento inválido en confirmación:', documentoId);
@@ -1431,7 +1396,7 @@ function TerceroView() {
         }
 
         if (window.confirm(`¿Está seguro de que desea eliminar el documento "${nombreDocumento}"?`)) {
-            console.log('🗑️ TerceroView - Usuario confirmó eliminación, llamando hook...');
+
             eliminarDocumentoDebidaDiligencia(documentoId);
         }
     };
@@ -1449,7 +1414,7 @@ function TerceroView() {
 
         try {
             const exportUrl = `${APP_CONFIG.api.baseUrl}/terceros/${tercero.id}/exportar/`;
-            console.log(`📊 Iniciando exportación del tercero ${tercero.id}...`);
+
             console.log(`🔗 URL de exportación: ${exportUrl}`);
             
             const token = TokenStorage.getAccessToken();
@@ -1496,7 +1461,7 @@ function TerceroView() {
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
 
-            console.log('✅ Exportación completada exitosamente');
+
             
             toast({
                 title: "✅ Exportación exitosa",
@@ -4040,11 +4005,7 @@ function TerceroView() {
                                             <RefreshCw className={`h-3 w-3 ${loadingDebidaDiligencia ? 'animate-spin' : ''}`} />
                                         </Button>
                                     </h4>
-                                    {(() => {
-                                        console.log('🔍 Debug - Documentos debida diligencia para mostrar:', documentosDebidaDiligencia);
-                                        console.log('🔍 Debug - Tercero actual:', tercero?.id);
-                                        return null;
-                                    })()}
+
                                     <ul className="space-y-3">
                                         {!documentosDebidaDiligencia || documentosDebidaDiligencia.length === 0 ? (
                                             <li className="text-center py-8 text-gray-500">
@@ -4059,14 +4020,7 @@ function TerceroView() {
                                                     // Obtener el nombre del documento, con fallback si es undefined
                                                     const nombreDocumento = documento.nombre || documento.nombre_documento || 'Documento sin nombre';
 
-                                                    console.log('📄 Debug - Renderizando documento DD:', {
-                                                        id: documento.id,
-                                                        nombre: documento.nombre,
-                                                        nombre_documento: documento.nombre_documento,
-                                                        nombreFinal: nombreDocumento,
-                                                        tipo_id: typeof documento.id,
-                                                        es_valido: !!(documento.id && documento.id !== undefined && documento.id !== null)
-                                                    });
+
                                                     return (
                                                         <li key={documento.id} className="flex items-center gap-4 p-3 bg-green-50 rounded-lg border border-green-100">
                                                             <Shield className="h-5 w-5 text-green-600" />
@@ -4174,7 +4128,7 @@ function TerceroView() {
                 isOpen={modalConsultaAbierto}
                 onClose={cerrarModalStratadaIntegrado}
                 onSuccess={(resultado) => {
-                    console.log('✅ Consulta Stradata completada:', resultado);
+
                     // Recargar documentos subidos después de una consulta exitosa
                     cargarDocumentosStratadaSubidos();
                     // El modal se cerrará automáticamente por el hook
@@ -4452,13 +4406,13 @@ const UploadStratadaDocumentForm = ({
 
 // Componente para mostrar estructura jerárquica de accionistas
 const AccionistasJerarquicos = ({ accionistas }: { accionistas: any[] }) => {
-    console.log("📊 Datos de accionistas recibidos:", accionistas);
+
     
     // El backend ya envía la estructura jerárquica correcta
     // Los accionistas principales tienen empresaPadre="MATRIZ" y subAccionistas como array
     const accionistasPrincipales = accionistas.filter(acc => acc.empresaPadre === "MATRIZ");
     
-    console.log("👑 Accionistas principales:", accionistasPrincipales);
+
     
     // Calcular total de participación de accionistas principales
     const totalPrincipal = accionistasPrincipales.reduce((sum, acc) => {

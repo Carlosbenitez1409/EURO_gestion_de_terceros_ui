@@ -7,7 +7,7 @@ const setupAxiosInterceptors = (instance: AxiosInstance) => {
     // Solo interceptor de request para logging
     instance.interceptors.request.use(
         (config) => {
-            console.log(`📤 ${config.method?.toUpperCase()} ${config.url}`);
+
             return config;
         },
         (error) => {
@@ -171,11 +171,6 @@ enhancedApiClient.interceptors.request.use(
 // Response interceptor para manejar respuestas y errores (con soporte para mock)
 enhancedApiClient.interceptors.response.use(
   (response: AxiosResponse<ApiResponse>) => {
-    console.log(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
-      status: response.status,
-      data: response.data
-    });
-
     return response;
   },
   async (error) => {
@@ -184,7 +179,7 @@ enhancedApiClient.interceptors.response.use(
     // Verificar si estamos en modo mock (COMENTADO - usando backend real)
     /*
     if (APP_CONFIG.development.useMockData) {
-      console.log('🎭 Mock mode activated, handling request:', originalRequest.url);
+
       
       // Simular delay de red
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -277,21 +272,15 @@ enhancedApiClient.interceptors.response.use(
     let errorMessage = 'Error desconocido';
     
     // Debug: Log completo del error para debugging
-    console.log('🔍 Debug - Error completo:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        message: error.message,
-        hasResponse: !!error.response
-    });
+    
     
     // Manejar diferentes tipos de respuesta de error del backend
     if (errorResponse) {
-        console.log('🔍 Debug - Error response data:', errorResponse);
+
         
         // Log transiciones permitidas si están disponibles
         if (errorResponse.transiciones_permitidas) {
-            console.log('🔍 Transiciones permitidas por el backend:', errorResponse.transiciones_permitidas);
+
         }
         
         if (typeof errorResponse === 'string') {
@@ -312,19 +301,19 @@ enhancedApiClient.interceptors.response.use(
     }
 
     // Mensajes específicos según el status code y contenido
-    console.log('🔍 Debug - Status code:', error.response?.status, 'Message extracted:', errorMessage);
+
     
     if (error.response?.status === 400) {
-        console.log('🔍 Debug - Processing 400 error with message:', errorMessage);
+
         // Error 400 - Bad Request (usualmente credenciales incorrectas)
         if (errorMessage.includes('Credenciales') || errorMessage.includes('credenciales') || 
             errorMessage.includes('inválidas') || errorMessage.includes('incorrectas') ||
             errorMessage.includes('datos incorrectos')) {
             errorMessage = 'Usuario o contraseña incorrectos';
-            console.log('🔍 Debug - 400 matched credentials pattern, new message:', errorMessage);
+
         } else {
             errorMessage = errorMessage || 'Datos inválidos en la solicitud';
-            console.log('🔍 Debug - 400 no pattern match, using:', errorMessage);
+
         }
     } else if (error.response?.status === 401) {
         errorMessage = errorMessage.includes('token') 
@@ -340,7 +329,7 @@ enhancedApiClient.interceptors.response.use(
         errorMessage = 'Error del servidor. Intenta nuevamente más tarde.';
     } else if (!error.response) {
         errorMessage = 'Error de conexión. Verifica tu conexión a internet.';
-        console.log('🔍 Debug - No response object, using connection error');
+
     }
 
     const apiError: ApiError = {
@@ -349,7 +338,7 @@ enhancedApiClient.interceptors.response.use(
       details: error.response?.data
     };
 
-    console.log('🔍 Debug - Final API Error object:', apiError);
+
     return Promise.reject(apiError);
   }
 );
@@ -375,7 +364,7 @@ export const apiRequest = {
       timeout: 300000, // 5 minutos para consultas Stradata
     };
     
-    console.log(`🔍 Iniciando consulta Stradata con timeout extendido: ${stradataConfig.timeout}ms`);
+
     const response = await enhancedApiClient.post<ApiResponse<T>>(url, data, stradataConfig);
     // Para endpoints de Django DRF que devuelven datos directamente
     return response.data.data !== undefined ? response.data.data! : response.data as T;

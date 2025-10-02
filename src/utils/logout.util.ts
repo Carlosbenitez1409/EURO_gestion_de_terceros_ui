@@ -1,7 +1,7 @@
-// Función utilitaria para manejar el logout del sistema
+// Función utilitaria paramanejarel logout del sistema
 export const logoutUser = () => {
   try {
-    console.log('🔄 Iniciando logout del sistema...');
+
     
     // Lista de todos los elementos de localStorage a limpiar
     const localStorageKeys = [
@@ -24,7 +24,7 @@ export const logoutUser = () => {
     localStorageKeys.forEach(key => {
       if (localStorage.getItem(key)) {
         localStorage.removeItem(key);
-        console.log(`🗑️ Eliminado de localStorage: ${key}`);
+
       }
     });
     
@@ -32,18 +32,18 @@ export const logoutUser = () => {
     sessionStorageKeys.forEach(key => {
       if (sessionStorage.getItem(key)) {
         sessionStorage.removeItem(key);
-        console.log(`🗑️ Eliminado de sessionStorage: ${key}`);
+
       }
     });
     
     // Limpiar completamente sessionStorage para estar seguros
     sessionStorage.clear();
     
-    console.log('✅ Logout completado exitosamente');
+
     
     // Usar setTimeout para asegurar que el localStorage se limpie antes de la redirección
     setTimeout(() => {
-      console.log('🔄 Redirigiendo a página principal...');
+
       window.location.replace('/');
     }, 100);
     

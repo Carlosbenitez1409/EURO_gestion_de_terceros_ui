@@ -297,14 +297,7 @@ export default function Dashboard({ userRole }: DashboardProps) {
 
     const getDisplayName = (tercero: any) => {
         // Debug: vamos a ver qué datos tenemos
-        console.log('getDisplayName - tercero:', {
-            tipo_persona: tercero.tipo_persona,
-            nombre_completo: tercero.nombre_completo,
-            nombres: tercero.nombres,
-            apellidos: tercero.apellidos,
-            razon_social: tercero.razon_social,
-            numero_documento: tercero.numero_documento
-        });
+
 
         // Primero intentar con nombre_completo (que es lo que envía el backend)
         if (tercero.nombre_completo && tercero.nombre_completo.trim()) {

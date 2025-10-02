@@ -11,23 +11,17 @@ export const getBestReassignmentState = (
   availableTransitions: string[] | Record<string, any>, 
   currentState: string
 ): EstadoTercero | null => {
-  console.log('🔍 getBestReassignmentState - Input:', {
-    availableTransitions,
-    currentState,
-    inputType: typeof availableTransitions,
-    isArray: Array.isArray(availableTransitions)
-  });
   
   // Convertir objeto a array si es necesario
   let transitionsArray: string[] = [];
   
   if (Array.isArray(availableTransitions)) {
     transitionsArray = availableTransitions;
-    console.log('✅ Transiciones ya son array:', transitionsArray);
+
   } else if (typeof availableTransitions === 'object' && availableTransitions !== null) {
     // Si el backend devuelve un objeto con las transiciones como keys
     transitionsArray = Object.keys(availableTransitions);
-    console.log('🔄 Convertido objeto a array:', transitionsArray);
+
   }
   
   // Orden de preferencia para reasignación (13 ESTADOS ESPECÍFICOS)
@@ -46,12 +40,12 @@ export const getBestReassignmentState = (
     'rechazado'
   ];
   
-  console.log('🎯 Evaluando preferencias:', preferenceOrder);
+
   
   for (const state of preferenceOrder) {
-    console.log(`🔍 Verificando si '${state}' está en transiciones disponibles:`, transitionsArray.includes(state));
+
     if (transitionsArray.includes(state)) {
-      console.log(`✅ Estado seleccionado: ${state}`);
+
       return state;
     }
   }

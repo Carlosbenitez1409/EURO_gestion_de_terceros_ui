@@ -2,8 +2,8 @@ import { API_CONFIG, apiRequest, TokenStorage } from '@/lib/api.client';
 
 // Tipos para Debida Diligencia
 export interface DebidaDiligenciaDocumento {
-    id: string; // UUID como string, no number
-    uuid: string; // UUID del documento
+    id: string; // UUID como str, number
+  uuid: string; // UUID del documento
     tercero?: string; // UUID del tercero (opcional para compatibilidad)
     tercero_uuid?: string; // UUID del tercero
     tercero_nombre?: string; // Nombre del tercero
@@ -66,29 +66,10 @@ class DebidaDiligenciaService {
      */
     async obtenerDocumentos(terceroId: string): Promise<DebidaDiligenciaDocumento[]> {
         try {
-            console.log('🔍 Debug - Obteniendo documentos para tercero:', terceroId);
             const timestamp = Date.now();
             const url = `${this.baseUrl}/${terceroId}/debida-diligencia/?_t=${timestamp}`;
-            console.log('🔍 Debug - URL de request:', url);
             
             const response = await apiRequest.get<DebidaDiligenciaTercerosResponse>(url);
-            
-            console.log('🔍 Debug - Respuesta de documentos:', response);
-            console.log('🔍 Debug - Documentos obtenidos:', response.documentos?.length || 0);
-            
-            // Log detallado de cada documento para verificar filtrado
-            if (response.documentos && response.documentos.length > 0) {
-                console.log('🔍 Debug - DETALLES DE DOCUMENTOS OBTENIDOS:');
-                response.documentos.forEach((doc, index) => {
-                    console.log(`🔍 Debug - Documento ${index + 1}:`, {
-                        id: doc.id,
-                        tercero: doc.tercero_uuid,
-                        nombre: doc.nombre,
-                        categoria: doc.categoria,
-                        tercero_solicitado: terceroId
-                    });
-                });
-            }
             
             return response.documentos || [];
         } catch (error) {
@@ -102,46 +83,27 @@ class DebidaDiligenciaService {
      */
     async subirDocumento(data: DebidaDiligenciaUploadRequest): Promise<DebidaDiligenciaDocumento> {
         try {
-            console.log('📤 Debug - SUBIENDO DOCUMENTO');
-            console.log('📤 Debug - Tercero UUID:', data.tercero);
-            console.log('📤 Debug - Categoría:', data.categoria);
-            console.log('📤 Debug - Nombre archivo:', data.nombre_documento);
-            console.log('📤 Debug - Archivo objeto:', data.archivo);
-            
-            console.log('📤 Debug - Preparando FormData...');
-            const formData = new FormData();
-            
-            // Campo OBLIGATORIO - usar solo 'archivo' según documentación
+            const formData = new FormData();            // Campo OBLIGATORIO - usar solo 'archivo' según documentación
             formData.append('archivo', data.archivo);
-            console.log('📤 Debug - Archivo agregado:', data.archivo.name, 'Tamaño:', data.archivo.size, 'Tipo:', data.archivo.type);
             
             // Campo OPCIONAL - nombre del documento
             if (data.nombre_documento) {
                 formData.append('nombre', data.nombre_documento);
-                console.log('📤 Debug - Nombre agregado:', data.nombre_documento);
             }
             
             // Campo OPCIONAL - tipo específico DD
             if (data.categoria === 'debida_diligencia') {
                 formData.append('tipo_documento', 'debida_diligencia_otro');
-                console.log('📤 Debug - Tipo documento agregado: debida_diligencia_otro');
             }
             
             const uploadUrl = `${this.baseUrl}/${data.tercero}/debida-diligencia/upload/`;
-            console.log('📤 Debug - URL de subida:', uploadUrl);
 
             // Obtener token para autenticación usando el método oficial del sistema
             const token = TokenStorage.getAccessToken();
-            console.log('📤 Debug - Token presente:', !!token);
-            console.log('📤 Debug - Token length:', token?.length || 0);
             
             if (!token) {
-                console.error('📤 Debug - No se encontró token. Verificando almacenamiento...');
-                console.log('📤 Debug - Keys en localStorage:', Object.keys(localStorage));
                 throw new Error('No hay token de autenticación disponible');
             }
-
-            console.log('📤 Debug - Usando fetch() directo para evitar interceptor axios...');
             
             // Usar fetch() directo para evitar el interceptor que fuerza application/json
             const response = await fetch(uploadUrl, {
@@ -153,8 +115,7 @@ class DebidaDiligenciaService {
                 body: formData
             });
 
-            console.log('📤 Debug - Respuesta del servidor - Status:', response.status);
-            console.log('📤 Debug - Headers de respuesta:', Object.fromEntries(response.headers.entries()));
+
 
             if (!response.ok) {
                 const errorData = await response.json();
@@ -176,9 +137,7 @@ class DebidaDiligenciaService {
      */
     async descargarDocumento(documentoId: string, terceroId?: string): Promise<void> {
         try {
-            console.log('⬇️ Debug - DESCARGANDO DOCUMENTO');
-            console.log('⬇️ Debug - Documento ID:', documentoId);
-            console.log('⬇️ Debug - Tercero ID:', terceroId);
+
             
             // Validación robusta del ID (ahora string UUID)
             if (!documentoId || documentoId === undefined || documentoId === null || documentoId === 'undefined' || documentoId === 'null' || documentoId.trim() === '') {
@@ -189,17 +148,15 @@ class DebidaDiligenciaService {
             
             // URL exacta según documentación del backend: /api/terceros/debida-diligencia/{documento_id}/download/
             const downloadUrl = `${this.baseUrl}/debida-diligencia/${documentoId}/download/`;
-            console.log('⬇️ Debug - URL de descarga (backend exacta):', downloadUrl);
+
             
             // Usar apiRequest que maneja automáticamente la autenticación JWT
-            console.log('⬇️ Debug - Realizando petición con autenticación automática...');
+
             const response = await apiRequest.get(downloadUrl, {
                 responseType: 'blob'  // Para manejar archivos binarios
             });
 
-            console.log('⬇️ Debug - Respuesta exitosa del servidor');
-            console.log('⬇️ Debug - Tipo de respuesta:', typeof response.data);
-            console.log('⬇️ Debug - Tamaño de datos:', response.data?.size || 'desconocido');
+
             
             // Crear blob y descargar archivo
             const downloadBlob = new Blob([response.data]);

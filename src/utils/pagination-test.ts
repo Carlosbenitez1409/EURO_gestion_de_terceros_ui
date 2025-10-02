@@ -12,7 +12,7 @@ export async function testBackendPagination() {
   
   try {
     // Prueba 1: Paginación básica
-    console.log('\n📄 Prueba 1: Paginación básica');
+
     const response1 = await tercerosDRFService.getTerceros({
       page: 1,
       page_size: 5
@@ -33,10 +33,10 @@ export async function testBackendPagination() {
       response1.hasOwnProperty('previous')
     );
     
-    console.log('✅ Estructura válida:', hasRequiredFields);
+
     
     // Prueba 2: Filtros
-    console.log('\n🔍 Prueba 2: Filtros y búsqueda');
+
     const response2 = await tercerosDRFService.getTerceros({
       page: 1,
       page_size: 3,

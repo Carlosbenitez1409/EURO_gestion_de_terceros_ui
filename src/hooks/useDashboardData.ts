@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { dashboardDRFService } from '@/services/dashboard.drf.service';
+import { dashboardDRFService } from '@/services/dashboard.drf.service'
 import { tercerosDRFService } from '@/services/terceros.drf.service';
 import { useAuth } from '@/context/AuthContext';
 
@@ -36,7 +36,7 @@ export function useDashboardData(autoRefresh: boolean = true, refreshInterval: n
         queryParams.estado_aprobacion = 'asignada_procesos';
       } else if (user?.role === 'administrador') {
         // � ADMINISTRADOR: Ver TODOS los terceros del sistema sin filtros restrictivos
-        console.log('👑 ADMINISTRADOR - Cargando TODOS los terceros del sistema');
+
         queryParams.page_size = 50; // Aumentar tamaño de página para ver más terceros
         // NO aplicar filtros de estado o asignación - el admin ve todo
       } else if (user?.role === 'oficial_cumplimiento') {
@@ -75,14 +75,6 @@ export function useDashboardData(autoRefresh: boolean = true, refreshInterval: n
         const userRole = user.role;
         const userId = user.id;
         
-        console.log(`🔍 Evaluando tercero ${tercero.id} - Estado: ${estado}`);
-        console.log(`📋 Campos de asignación disponibles:`, {
-          asignado_administrador: tercero.asignado_administrador,
-          asignado_a_nombre: tercero.asignado_a_nombre,
-          asignado_comercial: tercero.asignado_comercial,
-          asignado_procesos: tercero.asignado_procesos,
-          asignado_a_procesos_nombre: tercero.asignado_a_procesos_nombre
-        });
         
         // Lógica de filtrado basada en estado y rol
         switch (userRole) {
@@ -135,7 +127,7 @@ export function useDashboardData(autoRefresh: boolean = true, refreshInterval: n
       });
       
       console.log(`🔍 Datos recibidos del backend para ${user?.role} (ID: ${user?.id}):`);
-      console.log(`📊 Total terceros del backend: ${(tercerosResponse.results || []).length}`);
+      
       console.log(`📋 Terceros:`, tercerosResponse.results);
       console.log(`🔍 Filtrado de terceros para ${user?.role}: ${(tercerosResponse.results || []).length} → ${filteredTerceros.length}`);
 

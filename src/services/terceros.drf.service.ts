@@ -279,7 +279,7 @@ export class TercerosService {
     static async obtenerTerceroCompleto(id: string): Promise<TerceroCreateRequest> {
         try {
             const response = await axios.get(`${API_CONFIG.baseURL}/api/terceros/${id}/`);
-            console.log('✅ Tercero obtenido:', response.data);
+
             return response.data;
         } catch (error: any) {
             console.error('❌ Error obteniendo tercero:', error.response?.data || error.message);
@@ -316,10 +316,10 @@ export class TercerosService {
             }
             
             const url = `${API_CONFIG.baseURL}/api/terceros/?${params.toString()}`;
-            console.log('🔍 Consultando:', url);
+
             
             const response = await axios.get(url);
-            console.log(`✅ ${response.data.results?.length || 0} terceros encontrados`);
+
             
             return response.data;
             
@@ -370,10 +370,10 @@ export class TercerosService {
         datos: Partial<TerceroCreateRequest>
     ): Promise<TerceroCreateRequest> {
         try {
-            console.log('🔄 Actualizando tercero:', id, datos);
+
             
             const response = await axios.patch(`${API_CONFIG.baseURL}/api/terceros/${id}/`, datos);
-            console.log('✅ Tercero actualizado exitosamente');
+
             
             return response.data;
             
@@ -518,10 +518,7 @@ class TercerosDRFService {
       }
     );
     
-    console.log(`✅ Public API Response: POST /api/terceros/`, {
-      status: response.status,
-      data: response.data
-    });
+
     
     return response.data;
   }
@@ -792,11 +789,7 @@ class TercerosDRFService {
       ...(data.asignar_a && { asignar_a: data.asignar_a }) // ✅ Solo incluir si se proporciona
     };
     
-    console.log('📤 Cambiando estado de tercero:', { 
-      id, 
-      frontend_params: data,
-      backend_payload: backendPayload 
-    });
+
     
     try {
       const response = await apiRequest.post<{
@@ -807,7 +800,6 @@ class TercerosDRFService {
         estado_nuevo: string;
         historial_id: string;
       }>(`/terceros/${id}/cambiar_estado/`, backendPayload);
-      console.log('✅ Estado cambiado exitosamente:', response);
       return response;
     } catch (error) {
       console.error('❌ Error cambiando estado:', error);
@@ -851,7 +843,7 @@ class TercerosDRFService {
    * Obtener transiciones disponibles para un estado específico
    */
   async getAvailableTransitions(currentState: string): Promise<string[]> {
-    console.log('📤 Consultando transiciones para estado:', currentState);
+
     try {
       // 🚀 ACTUALIZADO: Usar endpoint real implementado en el backend
       const response = await apiRequest.get<{
@@ -860,39 +852,39 @@ class TercerosDRFService {
         estados_disponibles?: string[];
         estados_labels?: Record<string, string>;
       } | Record<string, any>>(`/api/transiciones-disponibles/?estado=${currentState}`);
-      console.log('📥 Respuesta del backend:', response);
+
       
       // 🔍 ARREGLADO: Manejar el formato real del backend
       if (response.success && response.transiciones) {
-        console.log('✅ Formato con success detectado, transiciones:', response.transiciones);
+
         
         // Si transiciones es un objeto, extraer las keys
         if (typeof response.transiciones === 'object' && !Array.isArray(response.transiciones)) {
           const transitionKeys = Object.keys(response.transiciones);
-          console.log('🔄 Transiciones extraídas del objeto:', transitionKeys);
+
           return transitionKeys;
         }
         
         // Si transiciones es un array, devolverlo directamente
         if (Array.isArray(response.transiciones)) {
-          console.log('✅ Transiciones como array:', response.transiciones);
+
           return response.transiciones;
         }
       }
       
       // Fallback: buscar campo transiciones directamente
       if (response.transiciones && Array.isArray(response.transiciones)) {
-        console.log('✅ Formato estándar detectado:', response.transiciones);
+
         return response.transiciones;
       } 
       
       // Último fallback: usar estados_disponibles si existe
       if (response.estados_disponibles && Array.isArray(response.estados_disponibles)) {
-        console.log('🔄 Usando estados_disponibles como fallback:', response.estados_disponibles);
+
         return response.estados_disponibles;
       }
       
-      console.log('⚠️ Formato no reconocido, devolviendo array vacío');
+
       return [];
     } catch (error) {
       console.error('❌ Error consultando transiciones:', error);
@@ -911,12 +903,12 @@ class TercerosDRFService {
     comentario: string;
     asignar_a_id?: number;
   }): Promise<TerceroDRF> {
-    console.log('🔄 Cambiando estado del tercero:', terceroId, data);
+
     
     try {
       const response = await apiRequest.post<TerceroDRF>(`/terceros/${terceroId}/cambiar_estado/`, data);
 
-      console.log('✅ Estado cambiado exitosamente:', response);
+
       return response;
     } catch (error) {
       console.error('❌ Error cambiando estado:', error);
@@ -929,12 +921,12 @@ class TercerosDRFService {
    * Endpoint: GET /api/terceros/{tercero_id}/historial/
    */
   async getHistorial(terceroId: string): Promise<any[]> {
-    console.log('📊 Obteniendo historial del tercero:', terceroId);
+
     
     try {
       const response = await apiRequest.get<any[]>(`/terceros/${terceroId}/historial/`);
 
-      console.log('✅ Historial obtenido:', response);
+
       return response;
     } catch (error) {
       console.error('❌ Error obteniendo historial:', error);
@@ -947,12 +939,12 @@ class TercerosDRFService {
    * Endpoint: GET /api/terceros/{tercero_id}/estadisticas/
    */
   async getEstadisticas(terceroId: string): Promise<any> {
-    console.log('📈 Obteniendo estadísticas del tercero:', terceroId);
+
     
     try {
       const response = await apiRequest.get<any>(`/terceros/${terceroId}/estadisticas/`);
 
-      console.log('✅ Estadísticas obtenidas:', response);
+
       return response;
     } catch (error) {
       console.error('❌ Error obteniendo estadísticas:', error);
@@ -969,12 +961,12 @@ class TercerosDRFService {
    * - Administrador: Ve todos los terceros
    */
   async getTercerosAsignados(): Promise<TerceroDRF[]> {
-    console.log('👥 Obteniendo terceros asignados al usuario actual');
+
     
     try {
       const response = await apiRequest.get<TerceroDRF[]>('/terceros/');
 
-      console.log('✅ Terceros asignados obtenidos:', response.length);
+
       return response;
     } catch (error) {
       console.error('❌ Error obteniendo terceros asignados:', error);
@@ -987,12 +979,12 @@ class TercerosDRFService {
    * Endpoint: GET /api/terceros/?asignado_cumplimiento={user_id}
    */
   async getTercerosPorCumplimiento(usuarioId: number): Promise<TerceroDRF[]> {
-    console.log('👥 Obteniendo terceros asignados a cumplimiento:', usuarioId);
+
     
     try {
       const response = await apiRequest.get<TerceroDRF[]>(`/terceros/?asignado_cumplimiento=${usuarioId}`);
 
-      console.log('✅ Terceros de cumplimiento obtenidos:', response.length);
+
       return response;
     } catch (error) {
       console.error('❌ Error obteniendo terceros de cumplimiento:', error);
@@ -1004,7 +996,7 @@ class TercerosDRFService {
   static async asignar(id: string, data: AsignarRequest): Promise<TerceroDRF> {
     try {
       const response = await axios.post(`${API_CONFIG.baseURL}/api/terceros/${id}/asignar/`, data);
-      console.log('✅ Tercero asignado:', response.data);
+
       return response.data;
     } catch (error) {
       console.error('❌ Error asignando tercero:', error);
@@ -1016,7 +1008,7 @@ class TercerosDRFService {
   static async cambiarEstadoYAsignacion(id: string, data: CambiarEstadoRequest): Promise<TerceroDRF> {
     try {
       const response = await axios.post(`${API_CONFIG.baseURL}/api/terceros/${id}/cambiar_estado/`, data);
-      console.log('✅ Estado y asignación cambiados:', response.data);
+
       return response.data;
     } catch (error) {
       console.error('❌ Error cambiando estado y asignación:', error);
@@ -1028,7 +1020,7 @@ class TercerosDRFService {
   static async obtenerHistorial(id: string): Promise<HistorialEntry[]> {
     try {
       const response = await axios.get(`${API_CONFIG.baseURL}/api/terceros/${id}/historial/`);
-      console.log('✅ Historial obtenido:', response.data);
+
       return response.data;
     } catch (error) {
       console.error('❌ Error obteniendo historial:', error);
@@ -1046,7 +1038,7 @@ class TercerosDRFService {
       }
       
       const response = await axios.get(`${API_CONFIG.baseURL}/api/terceros/por_rol/?${params}`);
-      console.log('✅ Terceros por rol obtenidos:', response.data);
+
       return response.data;
     } catch (error) {
       console.error('❌ Error obteniendo terceros por rol:', error);
